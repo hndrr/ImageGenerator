@@ -170,7 +170,9 @@ function App() {
       }
 
       if (!imageGenerated) {
-        throw new Error("画像データが見つかりませんでした");
+        throw new Error(
+          `画像データが返ってきませんでした。\n\n複数回試しても結果が返ってこない場合は、\n画像もしくはプロンプトの変更を試してください。`
+        );
       }
 
       setResponseLog({
@@ -245,7 +247,9 @@ function App() {
                   {isApiKeyFromEnv ? (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Gemini APIキー</Label>
+                        <Label className="text-lg font-semibold">
+                          Gemini APIキー
+                        </Label>
                       </div>
                       <div className="relative">
                         <div className="flex w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
@@ -264,7 +268,7 @@ function App() {
                   />
 
                   <div className="space-y-2">
-                    <Label>出力サイズ</Label>
+                    <Label className="text-lg font-semibold">出力サイズ</Label>
                     <SizeSelector
                       value={selectedSize}
                       onChange={setSelectedSize}
@@ -272,7 +276,9 @@ function App() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="prompt">プロンプト</Label>
+                    <Label className="text-lg font-semibold" htmlFor="prompt">
+                      プロンプト
+                    </Label>
                     <TipTapEditor
                       value={prompt}
                       onChange={setPrompt}
