@@ -248,8 +248,8 @@ function App() {
                         <Label>Gemini APIキー</Label>
                       </div>
                       <div className="relative">
-                        <div className="flex w-full rounded-md border border-border bg-muted px-3 py-2 text-sm">
-                          GEMINI_API_KEY ALREADY SET ENV
+                        <div className="flex w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
+                          $GEMINI_API_KEY ALREADY SET ENV
                         </div>
                       </div>
                     </div>
