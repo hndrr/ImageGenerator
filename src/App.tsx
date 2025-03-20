@@ -47,7 +47,9 @@ function App() {
   const [shouldSaveApiKey, setShouldSaveApiKey] = useState<boolean>(false);
   const [responseLog, setResponseLog] = useState<ResponseLog | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string>("1024x1024");
+  const [selectedSize, setSelectedSize] = useState<string>(
+    "square image with 1:1 aspect ratio"
+  );
   const [isApiKeyFromEnv, setIsApiKeyFromEnv] = useState<boolean>(false);
 
   useEffect(() => {
@@ -137,9 +139,35 @@ function App() {
     setError(null);
     setGeneratedImage(null);
 
+    // サイズを含むプロンプトを作成
+    let finalPrompt = prompt;
+    if (selectedSize && !prompt.includes(selectedSize)) {
+      // プロンプトが空の場合は簡単なプロンプトを作成
+      if (!prompt) {
+        finalPrompt = `Please follow the instructions below to change the image:\n\n- ${selectedSize}`;
+      } else {
+        const splitPrompt = prompt.split("\n\n");
+        if (splitPrompt.length >= 2) {
+          // システムプロンプト部分を取得し、その後に選択サイズとユーザープロンプトを追加
+          finalPrompt = `${splitPrompt[0]}\n\n- ${selectedSize}\n${splitPrompt
+            .slice(1)
+            .join("\n\n")}`;
+        } else {
+          // プロンプトが1行または空の場合
+          const systemLine =
+            "Please follow the instructions below to change the image:";
+          if (prompt.includes(systemLine)) {
+            finalPrompt = `${systemLine}\n\n- ${selectedSize}`;
+          } else {
+            finalPrompt = `${systemLine}\n\n- ${selectedSize}\n${prompt}`;
+          }
+        }
+      }
+    }
+
     try {
       const contents = [
-        { text: prompt },
+        { text: finalPrompt },
         ...images.map((image) => ({
           inlineData: {
             mimeType: "image/png",
@@ -148,15 +176,16 @@ function App() {
         })),
       ];
 
+      // ログに記録
       setResponseLog({
         status: "generating",
         timestamp: new Date().toISOString(),
         imageGenerated: false,
-        prompt: prompt,
+        prompt: finalPrompt,
         size: selectedSize,
         requestData: JSON.stringify(
           {
-            prompt,
+            prompt: finalPrompt,
             size: selectedSize,
             imageCount: images.length,
             imageNames: images.map((img) => img.filename),
@@ -200,12 +229,12 @@ function App() {
         status: "success",
         timestamp: new Date().toISOString(),
         imageGenerated: true,
-        prompt: prompt,
+        prompt: finalPrompt,
         size: selectedSize,
         rawResponse: JSON.stringify(response, null, 2),
         requestData: JSON.stringify(
           {
-            prompt,
+            prompt: finalPrompt,
             size: selectedSize,
             imageCount: images.length,
             imageNames: images.map((img) => img.filename),
@@ -224,11 +253,11 @@ function App() {
         timestamp: new Date().toISOString(),
         imageGenerated: false,
         error: errorMessage,
-        prompt: prompt,
+        prompt: finalPrompt,
         size: selectedSize,
         requestData: JSON.stringify(
           {
-            prompt,
+            prompt: finalPrompt,
             size: selectedSize,
             imageCount: images.length,
             imageNames: images.map((img) => img.filename),

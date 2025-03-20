@@ -1,4 +1,4 @@
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,8 @@ import {
   HeartIcon,
   FilterIcon,
   CloudIcon,
+  ApertureIcon,
+  ShirtIcon,
 } from "lucide-react";
 import {
   angleTemplates,
@@ -25,7 +27,10 @@ import {
   moodTemplates,
   filterTemplates,
   timeTemplates,
+  lensTemplates,
+  clothingTemplates,
 } from "@/lib/templates";
+import { useEffect, useRef } from "react";
 
 interface TipTapEditorProps {
   value: string;
@@ -39,6 +44,29 @@ interface TipTapEditorProps {
 const systemPrompt =
   "Please follow the instructions below to change the image:";
 
+// 完全なコンテンツからエディタ表示用の内容を抽出する関数
+const extractEditorContent = (fullContent: string): string => {
+  if (!fullContent) return "";
+
+  // システムプロンプトを削除
+  const withoutSystemPrompt = fullContent.replace(systemPrompt, "").trim();
+
+  // 先頭の空行を削除
+  const lines = withoutSystemPrompt.split("\n").filter((line) => line.trim());
+
+  // サイズ情報の行を削除（通常は先頭の1行）
+  if (
+    lines.length > 0 &&
+    (lines[0].startsWith("- wide") ||
+      lines[0].startsWith("- rectangular") ||
+      lines[0].startsWith("- square"))
+  ) {
+    lines.shift();
+  }
+
+  return lines.join("\n");
+};
+
 export function TipTapEditor({
   value,
   onChange,
@@ -47,6 +75,48 @@ export function TipTapEditor({
   images = [],
   selectedSize,
 }: TipTapEditorProps) {
+  // 前回のサイズを保持
+  const prevSizeRef = useRef(selectedSize);
+
+  // エディタの内容用の値を抽出
+  const editorContent = extractEditorContent(value);
+
+  // コンテンツ更新のヘルパー関数
+  const updateContentWithSize = (editor: Editor) => {
+    const editorContent = editor
+      .getHTML()
+      .replace(/<p>/g, "")
+      .replace(/<\/p>/g, "")
+      .split(/<br\/?>/g)
+      .map((line: string) => line.trim())
+      .filter((line: string) => line.length > 0)
+      .map((line: string) => (line.startsWith("-") ? line : `- ${line}`))
+      // サイズ指定行を除外
+      .filter(
+        (line: string) =>
+          !(
+            line.startsWith("- wide") ||
+            line.startsWith("- rectangular") ||
+            line.startsWith("- square")
+          )
+      )
+      .join("\n");
+
+    if (!editorContent) {
+      onChange("");
+      return;
+    }
+
+    // selectedSizeがある場合はpromptに追加
+    let finalContent: string;
+    if (selectedSize) {
+      finalContent = `${systemPrompt}\n\n- ${selectedSize}\n${editorContent}`;
+    } else {
+      finalContent = `${systemPrompt}\n\n${editorContent}`;
+    }
+    onChange(finalContent);
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -64,7 +134,9 @@ export function TipTapEditor({
         emptyEditorClass: "is-editor-empty",
       }),
     ],
-    content: value,
+    content: editorContent
+      ? `<p>${editorContent.replace(/\n/g, "<br>")}</p>`
+      : "",
     editorProps: {
       attributes: {
         class: "min-h-[200px] outline-none",
@@ -80,31 +152,49 @@ export function TipTapEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      const content = editor
-        .getHTML()
-        .replace(/<p>/g, "")
-        .replace(/<\/p>/g, "")
-        .split(/<br\/?>/g)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .map((line) => (line.startsWith("-") ? line : `- ${line}`))
-        .join("\n");
-
-      if (!content) {
-        onChange("");
-        return;
-      }
-
-      let finalContent = `${systemPrompt}\n\n${content}`;
-
-      // selectedSizeがある場合はpromptに追加
-      if (selectedSize) {
-        finalContent = `${systemPrompt}\n\n- ${selectedSize}\n${content}`;
-      }
-
-      onChange(finalContent);
+      updateContentWithSize(editor);
     },
   });
+
+  // サイズが変更された場合に強制的にプロンプトを更新
+  useEffect(() => {
+    if (editor && selectedSize !== prevSizeRef.current) {
+      prevSizeRef.current = selectedSize;
+
+      // エディタが空の場合、またはサイズ変更のみの場合は更新する
+      const currentContent = editor
+        .getHTML()
+        .replace(/<p>|<\/p>/g, "")
+        .replace(/<br\/?>/g, "\n")
+        .trim();
+      if (
+        currentContent === "" ||
+        (value && extractEditorContent(value).trim() === currentContent)
+      ) {
+        updateContentWithSize(editor);
+      }
+    }
+  }, [selectedSize, editor, value]);
+
+  // 外部からvalueが変更された場合にエディタ内容を更新
+  useEffect(() => {
+    if (editor) {
+      const newEditorContent = extractEditorContent(value);
+      const currentHTML = editor
+        .getHTML()
+        .replace(/<p>|<\/p>/g, "")
+        .replace(/<br\/?>/g, "\n");
+
+      // エディタの内容と異なる場合のみ更新
+      if (newEditorContent.trim() !== currentHTML.trim()) {
+        editor.commands.setContent(
+          newEditorContent
+            ? `<p>${newEditorContent.replace(/\n/g, "<br>")}</p>`
+            : ""
+        );
+      }
+    }
+  }, [value, editor]);
 
   if (!editor) {
     return null;
@@ -119,6 +209,9 @@ export function TipTapEditor({
     } else {
       editor.chain().focus().insertContent(`<br>- ${text}`).run();
     }
+
+    // テンプレート挿入後に強制的にコンテンツを更新
+    updateContentWithSize(editor);
   };
 
   const insertImageReference = (filename: string) => {
@@ -133,6 +226,9 @@ export function TipTapEditor({
     } else {
       editor.chain().focus().insertContent(`<br>${imageRef}`).run();
     }
+
+    // 画像参照挿入後に強制的にコンテンツを更新
+    updateContentWithSize(editor);
   };
 
   const insertAngleTemplate = (text: string) => {
@@ -171,6 +267,14 @@ export function TipTapEditor({
     insertTemplate(text);
   };
 
+  const insertLensTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertClothingTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
   return (
     <div className="space-y-2 border border-border rounded-lg">
       <div className="flex items-center gap-1 rounded-t-md border-b border-border bg-transparent p-1.5 flex-wrap">
@@ -200,14 +304,14 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <AngleIcon className="h-4 w-4" />
-            <span>アングル</span>
+            <BrushIcon className="h-4 w-4" />
+            <span>スタイル</span>
           </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {angleTemplates.map((template) => (
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {styleTemplates.map((template) => (
               <button
                 key={template.label}
-                onClick={() => insertAngleTemplate(template.text)}
+                onClick={() => insertStyleTemplate(template.text)}
                 className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
               >
                 {template.label}
@@ -236,6 +340,24 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <ShirtIcon className="h-4 w-4" />
+            <span>服装</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {clothingTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertClothingTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
             <GlassesIcon className="h-4 w-4" />
             <span>小道具</span>
           </Button>
@@ -254,14 +376,14 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <PaletteIcon className="h-4 w-4" />
-            <span>背景</span>
+            <AngleIcon className="h-4 w-4" />
+            <span>アングル</span>
           </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {backgroundTemplates.map((template) => (
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            {angleTemplates.map((template) => (
               <button
                 key={template.label}
-                onClick={() => insertBackgroundTemplate(template.text)}
+                onClick={() => insertAngleTemplate(template.text)}
                 className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
               >
                 {template.label}
@@ -272,14 +394,32 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <BrushIcon className="h-4 w-4" />
-            <span>スタイル</span>
+            <ApertureIcon className="h-4 w-4" />
+            <span>レンズ</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {styleTemplates.map((template) => (
+            {lensTemplates.map((template) => (
               <button
                 key={template.label}
-                onClick={() => insertStyleTemplate(template.text)}
+                onClick={() => insertLensTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <PaletteIcon className="h-4 w-4" />
+            <span>背景</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {backgroundTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertBackgroundTemplate(template.text)}
                 className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
               >
                 {template.label}
