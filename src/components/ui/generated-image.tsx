@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Button } from "./button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ImageModal } from "./image-modal";
 
 interface ResponseLog {
   status: "success" | "error" | "generating";
@@ -19,6 +20,7 @@ interface GeneratedImageProps {
   isLoading: boolean;
   responseLog: ResponseLog | null;
   error: string | null;
+  onUseAsInput?: (imageData: string) => void;
 }
 
 export function GeneratedImage({
@@ -26,6 +28,7 @@ export function GeneratedImage({
   isLoading,
   responseLog,
   error,
+  onUseAsInput,
 }: GeneratedImageProps) {
   const handleDownload = (imageData: string) => {
     const link = document.createElement("a");
@@ -83,20 +86,35 @@ export function GeneratedImage({
                 </div>
               ) : generatedImage ? (
                 <div className="space-y-2">
-                  <img
-                    src={generatedImage}
-                    alt="生成された画像"
-                    className="w-full rounded-lg object-contain h-96"
-                  />
-                  <Button
-                    onClick={() => handleDownload(generatedImage)}
-                    className="w-full"
-                    variant="secondary"
-                    size="sm"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    ダウンロード
-                  </Button>
+                  <ImageModal image={generatedImage} alt="生成された画像">
+                    <img
+                      src={generatedImage}
+                      alt="生成された画像"
+                      className="w-full rounded-lg object-contain h-96 cursor-pointer"
+                    />
+                  </ImageModal>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleDownload(generatedImage)}
+                      className="flex-1"
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      ダウンロード
+                    </Button>
+                    {onUseAsInput && (
+                      <Button
+                        onClick={() => onUseAsInput(generatedImage)}
+                        className="flex-1"
+                        variant="outline"
+                        size="sm"
+                      >
+                        <ArrowRight className="mr-2 h-4 w-4" />
+                        入力として使用
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="h-96 flex items-center justify-center bg-secondary">
