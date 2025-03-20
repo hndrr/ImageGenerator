@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import {
   ImageIcon,
-  Ratio as AspectRatioIcon,
   CameraIcon as AngleIcon,
   User as PoseIcon,
   GlassesIcon,
@@ -15,9 +14,10 @@ import {
   HeartIcon,
   FilterIcon,
   CloudIcon,
+  ApertureIcon,
+  ShirtIcon,
 } from "lucide-react";
 import {
-  aspectRatioTemplates,
   angleTemplates,
   poseTemplates,
   accessoryTemplates,
@@ -27,6 +27,8 @@ import {
   moodTemplates,
   filterTemplates,
   timeTemplates,
+  lensTemplates,
+  clothingTemplates,
 } from "@/lib/templates";
 
 interface TipTapEditorProps {
@@ -47,8 +49,39 @@ export function TipTapEditor({
   placeholder = "画像生成の指示を入力してください",
   className,
   images = [],
-  selectedSize,
 }: TipTapEditorProps) {
+  // HTMLコンテンツを処理するユーティリティ関数
+  const processContent = (html: string) => {
+    if (!html || html === "<p></p>") {
+      return "";
+    }
+
+    // HTMLから<p>と</p>タグを削除
+    const cleanedHtml = html.replace(/<p>/g, "").replace(/<\/p>/g, "");
+
+    // <br>タグで分割してライン配列を作成
+    let lines = cleanedHtml.split(/<br\/?>/g);
+
+    // 各ラインをトリムして空のラインを削除
+    lines = lines.map((line) => line.trim()).filter((line) => line.length > 0);
+
+    // 各ラインの先頭に「- 」がなければ追加（画像の場合は除く）
+    lines = lines.map((line) =>
+      line.startsWith("-") ? line : line.startsWith("![") ? line : `- ${line}`
+    );
+
+    // 改行で結合
+    return lines.join("\n");
+  };
+
+  // 最終的なプロンプトを作成する関数
+  const createFinalPrompt = (content: string) => {
+    if (!content) {
+      return "";
+    }
+    return `${systemPrompt}\n\n${content}`;
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -82,22 +115,15 @@ export function TipTapEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      const content = editor
-        .getHTML()
-        .replace(/<p>/g, "")
-        .replace(/<\/p>/g, "")
-        .split(/<br\/?>/g)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .map((line) => (line.startsWith("-") ? line : `- ${line}`))
-        .join("\n");
+      const html = editor.getHTML();
+      console.log("Original HTML:", html);
 
-      if (!content) {
-        onChange("");
-        return;
-      }
+      const content = processContent(html);
+      console.log("Processed content:", content);
 
-      const finalContent = `${systemPrompt}\n\n${content}`;
+      const finalContent = createFinalPrompt(content);
+      console.log("Final content:", finalContent);
+
       onChange(finalContent);
     },
   });
@@ -115,6 +141,15 @@ export function TipTapEditor({
     } else {
       editor.chain().focus().insertContent(`<br>- ${text}`).run();
     }
+
+    // テンプレート挿入後に明示的にプロンプトを更新
+    setTimeout(() => {
+      const updatedContent = editor.getHTML();
+      const content = processContent(updatedContent);
+      if (content) {
+        onChange(createFinalPrompt(content));
+      }
+    }, 0);
   };
 
   const insertImageReference = (filename: string) => {
@@ -129,10 +164,15 @@ export function TipTapEditor({
     } else {
       editor.chain().focus().insertContent(`<br>${imageRef}`).run();
     }
-  };
 
-  const insertAspectRatioTemplate = (text: string) => {
-    insertTemplate(text);
+    // 画像参照挿入後に明示的にプロンプトを更新
+    setTimeout(() => {
+      const updatedContent = editor.getHTML();
+      const content = processContent(updatedContent);
+      if (content) {
+        onChange(createFinalPrompt(content));
+      }
+    }, 0);
   };
 
   const insertAngleTemplate = (text: string) => {
@@ -171,17 +211,13 @@ export function TipTapEditor({
     insertTemplate(text);
   };
 
-  const getAspectRatioFromSize = (size: string) => {
-    if (!size) return null;
-    const [width, height] = size.split("x").map(Number);
-    return aspectRatioTemplates.find((template) =>
-      template.ratio(width, height)
-    );
+  const insertLensTemplate = (text: string) => {
+    insertTemplate(text);
   };
 
-  const currentAspectRatio = selectedSize
-    ? getAspectRatioFromSize(selectedSize)
-    : null;
+  const insertClothingTemplate = (text: string) => {
+    insertTemplate(text);
+  };
 
   return (
     <div className="space-y-2 border border-border rounded-lg">
@@ -212,35 +248,14 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <AspectRatioIcon className="h-4 w-4" />
-            <span>構図</span>
+            <BrushIcon className="h-4 w-4" />
+            <span>スタイル</span>
           </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {aspectRatioTemplates.map((template) => (
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {styleTemplates.map((template) => (
               <button
                 key={template.label}
-                onClick={() => insertAspectRatioTemplate(template.text)}
-                className={cn(
-                  "w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate",
-                  currentAspectRatio?.label === template.label && "font-bold"
-                )}
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <AngleIcon className="h-4 w-4" />
-            <span>アングル</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {angleTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertAngleTemplate(template.text)}
+                onClick={() => insertStyleTemplate(template.text)}
                 className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
               >
                 {template.label}
@@ -269,6 +284,24 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <ShirtIcon className="h-4 w-4" />
+            <span>服装</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {clothingTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertClothingTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
             <GlassesIcon className="h-4 w-4" />
             <span>小道具</span>
           </Button>
@@ -287,14 +320,14 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <PaletteIcon className="h-4 w-4" />
-            <span>背景</span>
+            <AngleIcon className="h-4 w-4" />
+            <span>アングル</span>
           </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {backgroundTemplates.map((template) => (
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            {angleTemplates.map((template) => (
               <button
                 key={template.label}
-                onClick={() => insertBackgroundTemplate(template.text)}
+                onClick={() => insertAngleTemplate(template.text)}
                 className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
               >
                 {template.label}
@@ -305,14 +338,32 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <BrushIcon className="h-4 w-4" />
-            <span>スタイル</span>
+            <ApertureIcon className="h-4 w-4" />
+            <span>レンズ</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {styleTemplates.map((template) => (
+            {lensTemplates.map((template) => (
               <button
                 key={template.label}
-                onClick={() => insertStyleTemplate(template.text)}
+                onClick={() => insertLensTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <PaletteIcon className="h-4 w-4" />
+            <span>背景</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {backgroundTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertBackgroundTemplate(template.text)}
                 className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
               >
                 {template.label}
