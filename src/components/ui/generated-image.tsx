@@ -66,7 +66,7 @@ export function GeneratedImage({
     <div className="space-y-6">
       <div>
         <CardHeader className="px-0">
-          <CardTitle>生成された画像</CardTitle>
+          <CardTitle className="text-lg">生成された画像</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
           <Card className="overflow-hidden">
@@ -93,7 +93,7 @@ export function GeneratedImage({
                   </Button>
                 </div>
               ) : (
-                <div className="h-96 flex items-center justify-center bg-secondary rounded-lg border-2 border-dashed">
+                <div className="h-96 flex items-center justify-center bg-secondary">
                   <p className="text-muted-foreground text-sm">
                     ここに生成された画像が表示されます
                   </p>
@@ -108,7 +108,7 @@ export function GeneratedImage({
 
       <div>
         <CardHeader className="px-0">
-          <CardTitle>ログ</CardTitle>
+          <CardTitle className="text-lg">ログ</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
           <Card className="border-border">
