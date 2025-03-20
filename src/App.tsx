@@ -236,7 +236,7 @@ function App() {
               Gemini画像ジェネレーター
             </CardTitle>
             <CardDescription className="text-center">
-              複数の画像をアップロードして、AIで新しい画像を生成
+              複数画像を追加して、AIで新しい画像を生成
             </CardDescription>
           </CardHeader>
           <CardContent>
