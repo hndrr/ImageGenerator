@@ -139,31 +139,36 @@ function App() {
     setError(null);
     setGeneratedImage(null);
 
+    // プロンプトチェックとデバッグ
+    console.log("Original prompt:", prompt);
+
     // サイズを含むプロンプトを作成
     let finalPrompt = prompt;
-    if (selectedSize && !prompt.includes(selectedSize)) {
-      // プロンプトが空の場合は簡単なプロンプトを作成
-      if (!prompt) {
-        finalPrompt = `Please follow the instructions below to change the image:\n\n- ${selectedSize}`;
+
+    // システムプロンプトがない場合は追加
+    const systemLine =
+      "Please follow the instructions below to change the image:";
+    if (!finalPrompt.includes(systemLine)) {
+      finalPrompt = `${systemLine}\n\n${finalPrompt}`;
+    }
+
+    // サイズが含まれていない場合は追加
+    if (selectedSize && !finalPrompt.includes(selectedSize)) {
+      const splitPrompt = finalPrompt.split("\n\n");
+
+      // システムプロンプト部分を取得し、その後に選択サイズを追加
+      if (splitPrompt.length >= 2) {
+        finalPrompt = `${splitPrompt[0]}\n\n- ${selectedSize}\n${splitPrompt
+          .slice(1)
+          .join("\n\n")}`;
       } else {
-        const splitPrompt = prompt.split("\n\n");
-        if (splitPrompt.length >= 2) {
-          // システムプロンプト部分を取得し、その後に選択サイズとユーザープロンプトを追加
-          finalPrompt = `${splitPrompt[0]}\n\n- ${selectedSize}\n${splitPrompt
-            .slice(1)
-            .join("\n\n")}`;
-        } else {
-          // プロンプトが1行または空の場合
-          const systemLine =
-            "Please follow the instructions below to change the image:";
-          if (prompt.includes(systemLine)) {
-            finalPrompt = `${systemLine}\n\n- ${selectedSize}`;
-          } else {
-            finalPrompt = `${systemLine}\n\n- ${selectedSize}\n${prompt}`;
-          }
-        }
+        // システムプロンプトしかない場合
+        finalPrompt = `${systemLine}\n\n- ${selectedSize}`;
       }
     }
+
+    // 最終的なプロンプトを確認
+    console.log("Final prompt:", finalPrompt);
 
     try {
       const contents = [

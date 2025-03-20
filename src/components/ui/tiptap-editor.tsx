@@ -50,6 +50,38 @@ export function TipTapEditor({
   className,
   images = [],
 }: TipTapEditorProps) {
+  // HTMLコンテンツを処理するユーティリティ関数
+  const processContent = (html: string) => {
+    if (!html || html === "<p></p>") {
+      return "";
+    }
+
+    // HTMLから<p>と</p>タグを削除
+    const cleanedHtml = html.replace(/<p>/g, "").replace(/<\/p>/g, "");
+
+    // <br>タグで分割してライン配列を作成
+    let lines = cleanedHtml.split(/<br\/?>/g);
+
+    // 各ラインをトリムして空のラインを削除
+    lines = lines.map((line) => line.trim()).filter((line) => line.length > 0);
+
+    // 各ラインの先頭に「- 」がなければ追加（画像の場合は除く）
+    lines = lines.map((line) =>
+      line.startsWith("-") ? line : line.startsWith("![") ? line : `- ${line}`
+    );
+
+    // 改行で結合
+    return lines.join("\n");
+  };
+
+  // 最終的なプロンプトを作成する関数
+  const createFinalPrompt = (content: string) => {
+    if (!content) {
+      return "";
+    }
+    return `${systemPrompt}\n\n${content}`;
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -83,22 +115,15 @@ export function TipTapEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      const content = editor
-        .getHTML()
-        .replace(/<p>/g, "")
-        .replace(/<\/p>/g, "")
-        .split(/<br\/?>/g)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .map((line) => (line.startsWith("-") ? line : `- ${line}`))
-        .join("\n");
+      const html = editor.getHTML();
+      console.log("Original HTML:", html);
 
-      if (!content) {
-        onChange("");
-        return;
-      }
+      const content = processContent(html);
+      console.log("Processed content:", content);
 
-      const finalContent = `${systemPrompt}\n\n${content}`;
+      const finalContent = createFinalPrompt(content);
+      console.log("Final content:", finalContent);
+
       onChange(finalContent);
     },
   });
@@ -116,6 +141,15 @@ export function TipTapEditor({
     } else {
       editor.chain().focus().insertContent(`<br>- ${text}`).run();
     }
+
+    // テンプレート挿入後に明示的にプロンプトを更新
+    setTimeout(() => {
+      const updatedContent = editor.getHTML();
+      const content = processContent(updatedContent);
+      if (content) {
+        onChange(createFinalPrompt(content));
+      }
+    }, 0);
   };
 
   const insertImageReference = (filename: string) => {
@@ -130,6 +164,15 @@ export function TipTapEditor({
     } else {
       editor.chain().focus().insertContent(`<br>${imageRef}`).run();
     }
+
+    // 画像参照挿入後に明示的にプロンプトを更新
+    setTimeout(() => {
+      const updatedContent = editor.getHTML();
+      const content = processContent(updatedContent);
+      if (content) {
+        onChange(createFinalPrompt(content));
+      }
+    }, 0);
   };
 
   const insertAngleTemplate = (text: string) => {
@@ -321,24 +364,6 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertBackgroundTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <BrushIcon className="h-4 w-4" />
-            <span>スタイル</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {styleTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertStyleTemplate(template.text)}
                 className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
               >
                 {template.label}
