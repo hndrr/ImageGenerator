@@ -43,14 +43,14 @@ export function ApiKeyInput({
         />
         <Key className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 jutify-end">
         <Switch
           id="save-api-key"
           checked={shouldSave}
           onCheckedChange={onShouldSaveChange}
         />
         <Label htmlFor="save-api-key" className="text-sm text-muted-foreground">
-          APIキーを保存する（暗号化して保存されます）
+          APIキーを保存（localStorageに暗号化して保存されます）
         </Label>
       </div>
     </div>
