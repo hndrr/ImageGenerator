@@ -1,17 +1,17 @@
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
-import { cn } from '@/lib/utils';
-import { Button } from './button';
-import { 
-  Image as ImageIcon, 
-  Ratio as AspectRatio, 
-  Camera as Angle, 
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import { cn } from "@/lib/utils";
+import { Button } from "./button";
+import {
+  Image as ImageIcon,
+  Ratio as AspectRatio,
+  Camera as Angle,
   User as Pose,
   Glasses,
   Palette,
   Brush,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface TipTapEditorProps {
   value: string;
@@ -22,12 +22,25 @@ interface TipTapEditorProps {
   selectedSize?: string;
 }
 
-const systemPrompt = "Please follow the instructions below to change the image:";
+const systemPrompt =
+  "Please follow the instructions below to change the image:";
 
 const aspectRatioTemplates = [
-  { label: "横長", text: "aspect:landscape", ratio: (w: number, h: number) => w > h },
-  { label: "縦長", text: "aspect:portrait", ratio: (w: number, h: number) => w < h },
-  { label: "正方形", text: "aspect:square", ratio: (w: number, h: number) => w === h },
+  {
+    label: "横長",
+    text: "aspect:landscape",
+    ratio: (w: number, h: number) => w > h,
+  },
+  {
+    label: "縦長",
+    text: "aspect:portrait",
+    ratio: (w: number, h: number) => w < h,
+  },
+  {
+    label: "正方形",
+    text: "aspect:square",
+    ratio: (w: number, h: number) => w === h,
+  },
 ];
 
 const angleTemplates = [
@@ -98,7 +111,7 @@ const styleTemplates = [
 export function TipTapEditor({
   value,
   onChange,
-  placeholder = '画像生成の指示を入力してください',
+  placeholder = "画像生成の指示を入力してください",
   className,
   images = [],
   selectedSize,
@@ -118,14 +131,15 @@ export function TipTapEditor({
     ],
     content: value,
     onUpdate: ({ editor }) => {
-      const content = editor.getHTML()
-        .replace(/<p>/g, '')
-        .replace(/<\/p>/g, '\n')
-        .replace(/<br>/g, '\n')
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .join('\n');
+      const content = editor
+        .getHTML()
+        .replace(/<p>/g, "")
+        .replace(/<\/p>/g, "\n")
+        .replace(/<br>/g, "\n")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .join("\n");
 
       const finalContent = content ? `${systemPrompt}\n\n${content}` : content;
       onChange(finalContent);
@@ -137,9 +151,14 @@ export function TipTapEditor({
   }
 
   const insertImageReference = (filename: string) => {
-    const imageNumber = images.findIndex(img => img.filename === filename) + 1;
+    const imageNumber =
+      images.findIndex((img) => img.filename === filename) + 1;
     const imageRef = `- ![image_${imageNumber}](${filename})`;
-    editor.chain().focus().insertContent(imageRef + '\n').run();
+    editor
+      .chain()
+      .focus()
+      .insertContent(imageRef + "\n")
+      .run();
   };
 
   const insertAspectRatioTemplate = (text: string) => {
@@ -168,11 +187,15 @@ export function TipTapEditor({
 
   const getAspectRatioFromSize = (size: string) => {
     if (!size) return null;
-    const [width, height] = size.split('x').map(Number);
-    return aspectRatioTemplates.find(template => template.ratio(width, height));
+    const [width, height] = size.split("x").map(Number);
+    return aspectRatioTemplates.find((template) =>
+      template.ratio(width, height)
+    );
   };
 
-  const currentAspectRatio = selectedSize ? getAspectRatioFromSize(selectedSize) : null;
+  const currentAspectRatio = selectedSize
+    ? getAspectRatioFromSize(selectedSize)
+    : null;
 
   return (
     <div className="space-y-2 border border-border rounded-lg">
@@ -188,24 +211,21 @@ export function TipTapEditor({
             <span>画像名</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {images.length > 0 && images.map((image, index) => (
-              <button
-                key={image.id}
-                onClick={() => insertImageReference(image.filename)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
-              >
-                {`image_${index + 1}: ${image.filename}`}
-              </button>
-            ))}
+            {images.length > 0 &&
+              images.map((image, index) => (
+                <button
+                  key={image.id}
+                  onClick={() => insertImageReference(image.filename)}
+                  className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                >
+                  {`image_${index + 1}: ${image.filename}`}
+                </button>
+              ))}
           </div>
         </div>
 
         <div className="relative group">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 gap-1"
-          >
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
             <AspectRatio className="h-4 w-4" />
             <span>構図</span>
           </Button>
@@ -226,11 +246,7 @@ export function TipTapEditor({
         </div>
 
         <div className="relative group">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 gap-1"
-          >
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
             <Angle className="h-4 w-4" />
             <span>アングル</span>
           </Button>
@@ -248,11 +264,7 @@ export function TipTapEditor({
         </div>
 
         <div className="relative group">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 gap-1"
-          >
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
             <Pose className="h-4 w-4" />
             <span>ポーズ</span>
           </Button>
@@ -270,11 +282,7 @@ export function TipTapEditor({
         </div>
 
         <div className="relative group">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 gap-1"
-          >
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
             <Glasses className="h-4 w-4" />
             <span>小道具</span>
           </Button>
@@ -292,11 +300,7 @@ export function TipTapEditor({
         </div>
 
         <div className="relative group">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 gap-1"
-          >
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
             <Palette className="h-4 w-4" />
             <span>背景</span>
           </Button>
@@ -314,11 +318,7 @@ export function TipTapEditor({
         </div>
 
         <div className="relative group">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 gap-1"
-          >
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
             <Brush className="h-4 w-4" />
             <span>スタイル</span>
           </Button>
@@ -336,15 +336,10 @@ export function TipTapEditor({
         </div>
       </div>
 
-      <div
-        className={cn(
-          'rounded-b-md bg-transparent',
-          className
-        )}
-      >
-        <EditorContent 
+      <div className={cn("rounded-b-md bg-transparent", className)}>
+        <EditorContent
           editor={editor}
-          className="px-4 py-3 min-h-[250px] prose prose-sm max-w-none prose-invert focus:outline-none [&_.ProseMirror]:min-h-[250px] [&_.ProseMirror]:px-1"
+          className="px-4 pb-3 min-h-[200px] prose prose-sm max-w-none prose-invert focus:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:px-1"
         />
       </div>
     </div>
