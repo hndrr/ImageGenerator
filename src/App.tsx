@@ -9,6 +9,7 @@ import { GeneratedImage } from "@/components/ui/generated-image";
 import { ApiKeyInput } from "@/components/ui/api-key-input";
 import { TipTapEditor } from "@/components/ui/tiptap-editor";
 import { SizeSelector } from "@/components/ui/size-selector";
+import { saveEncryptedApiKey, getDecryptedApiKey } from "@/lib/crypto";
 import {
   Card,
   CardContent,
@@ -16,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 interface ImageItem {
   id: string;
   originalImage: string;
@@ -42,19 +44,38 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string>("");
   const [apiKey, setApiKey] = useState<string>("");
+  const [shouldSaveApiKey, setShouldSaveApiKey] = useState<boolean>(false);
   const [responseLog, setResponseLog] = useState<ResponseLog | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>("1024x1024");
   const [isApiKeyFromEnv, setIsApiKeyFromEnv] = useState<boolean>(false);
 
   useEffect(() => {
-    // 環境変数からAPIキーを取得
+    // 環境変数とlocalStorageからAPIキーを取得
     const envApiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (envApiKey) {
       setApiKey(envApiKey);
       setIsApiKeyFromEnv(true);
+    } else {
+      // 暗号化されたAPIキーを復号化して取得
+      getDecryptedApiKey().then((decryptedKey) => {
+        if (decryptedKey) {
+          setApiKey(decryptedKey);
+          setShouldSaveApiKey(true);
+        }
+      });
     }
   }, []);
+
+  // APIキーが変更されたときに暗号化して保存（保存設定が有効な場合のみ）
+  useEffect(() => {
+    if (apiKey && !isApiKeyFromEnv && shouldSaveApiKey) {
+      saveEncryptedApiKey(apiKey);
+    } else if (!shouldSaveApiKey) {
+      // 保存設定が無効な場合は保存されているAPIキーを削除
+      localStorage.removeItem("encryptedApiKey");
+    }
+  }, [apiKey, isApiKeyFromEnv, shouldSaveApiKey]);
 
   const handleFiles = (files: File[]) => {
     const newImages = files.map((file) => {
@@ -258,7 +279,12 @@ function App() {
                       </div>
                     </div>
                   ) : (
-                    <ApiKeyInput value={apiKey} onChange={setApiKey} />
+                    <ApiKeyInput
+                      value={apiKey}
+                      onChange={setApiKey}
+                      shouldSave={shouldSaveApiKey}
+                      onShouldSaveChange={setShouldSaveApiKey}
+                    />
                   )}
 
                   <ImageUpload
