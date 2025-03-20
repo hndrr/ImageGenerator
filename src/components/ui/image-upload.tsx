@@ -1,6 +1,7 @@
 import React, { useRef, DragEvent } from "react";
 import { Loader2Icon, Upload, X } from "lucide-react";
 import { Button } from "./button";
+import { ImageModal } from "./image-modal";
 
 interface ImageItem {
   id: string;
@@ -79,11 +80,13 @@ export function ImageUpload({
             <div className="grid grid-cols-2 gap-4">
               {images.map((image) => (
                 <div key={image.id} className="relative group">
-                  <img
-                    src={image.originalImage}
-                    alt={image.filename}
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
+                  <ImageModal image={image.originalImage} alt={image.filename}>
+                    <img
+                      src={image.originalImage}
+                      alt={image.filename}
+                      className="w-full h-32 object-cover rounded-lg cursor-pointer"
+                    />
+                  </ImageModal>
                   <button
                     onClick={() => onImageRemove(image.id)}
                     className="absolute top-2 right-2 p-1 bg-destructive rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
