@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { Image as ImageIcon, Loader2 } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
@@ -45,12 +45,22 @@ function App() {
   const [responseLog, setResponseLog] = useState<ResponseLog | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>("1024x1024");
+  const [isApiKeyFromEnv, setIsApiKeyFromEnv] = useState<boolean>(false);
+
+  useEffect(() => {
+    // 環境変数からAPIキーを取得
+    const envApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (envApiKey) {
+      setApiKey(envApiKey);
+      setIsApiKeyFromEnv(true);
+    }
+  }, []);
 
   const handleFiles = (files: File[]) => {
-    const newImages = files.map(file => {
+    const newImages = files.map((file) => {
       return new Promise<ImageItem>((resolve, reject) => {
-        if (!file.type.startsWith('image/')) {
-          reject(new Error('画像ファイルのみアップロード可能です'));
+        if (!file.type.startsWith("image/")) {
+          reject(new Error("画像ファイルのみアップロード可能です"));
           return;
         }
 
@@ -61,7 +71,7 @@ function App() {
             originalImage: reader.result as string,
             generatedImage: null,
             status: "pending",
-            filename: file.name
+            filename: file.name,
           });
         };
         reader.onerror = () => reject(reader.error);
@@ -70,19 +80,19 @@ function App() {
     });
 
     Promise.all(newImages)
-      .then(loadedImages => {
-        setImages(prev => [...prev, ...loadedImages]);
+      .then((loadedImages) => {
+        setImages((prev) => [...prev, ...loadedImages]);
         setError(null);
         setResponseLog(null);
         setGeneratedImage(null);
       })
-      .catch(err => {
+      .catch((err) => {
         setError(err.message);
         setResponseLog({
           status: "error",
           timestamp: new Date().toISOString(),
           imageGenerated: false,
-          error: err.message
+          error: err.message,
         });
       });
   };
@@ -97,7 +107,7 @@ function App() {
         imageGenerated: false,
         error: errorMessage,
         prompt: prompt,
-        size: selectedSize
+        size: selectedSize,
       });
       return;
     }
@@ -109,7 +119,7 @@ function App() {
     try {
       const contents = [
         { text: prompt },
-        ...images.map(image => ({
+        ...images.map((image) => ({
           inlineData: {
             mimeType: "image/png",
             data: image.originalImage.split(",")[1],
@@ -123,12 +133,16 @@ function App() {
         imageGenerated: false,
         prompt: prompt,
         size: selectedSize,
-        requestData: JSON.stringify({
-          prompt,
-          size: selectedSize,
-          imageCount: images.length,
-          imageNames: images.map(img => img.filename)
-        }, null, 2)
+        requestData: JSON.stringify(
+          {
+            prompt,
+            size: selectedSize,
+            imageCount: images.length,
+            imageNames: images.map((img) => img.filename),
+          },
+          null,
+          2
+        ),
       });
 
       const genAI = new GoogleGenerativeAI(apiKey);
@@ -166,18 +180,21 @@ function App() {
         prompt: prompt,
         size: selectedSize,
         rawResponse: JSON.stringify(response, null, 2),
-        requestData: JSON.stringify({
-          prompt,
-          size: selectedSize,
-          imageCount: images.length,
-          imageNames: images.map(img => img.filename)
-        }, null, 2)
+        requestData: JSON.stringify(
+          {
+            prompt,
+            size: selectedSize,
+            imageCount: images.length,
+            imageNames: images.map((img) => img.filename),
+          },
+          null,
+          2
+        ),
       });
     } catch (err) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : "画像の生成に失敗しました";
-      
+      const errorMessage =
+        err instanceof Error ? err.message : "画像の生成に失敗しました";
+
       setError(errorMessage);
       setResponseLog({
         status: "error",
@@ -186,14 +203,18 @@ function App() {
         error: errorMessage,
         prompt: prompt,
         size: selectedSize,
-        requestData: JSON.stringify({
-          prompt,
-          size: selectedSize,
-          imageCount: images.length,
-          imageNames: images.map(img => img.filename)
-        }, null, 2)
+        requestData: JSON.stringify(
+          {
+            prompt,
+            size: selectedSize,
+            imageCount: images.length,
+            imageNames: images.map((img) => img.filename),
+          },
+          null,
+          2
+        ),
       });
-      
+
       console.error("エラー:", err);
     } finally {
       setIsLoading(false);
@@ -201,7 +222,7 @@ function App() {
   };
 
   const removeImage = (id: string) => {
-    setImages(prev => prev.filter(img => img.id !== id));
+    setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   return (
@@ -209,7 +230,9 @@ function App() {
       <div className="max-w-7xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Gemini画像ジェネレーター</CardTitle>
+            <CardTitle className="text-center">
+              Gemini画像ジェネレーター
+            </CardTitle>
             <CardDescription className="text-center">
               複数の画像をアップロードして、AIで新しい画像を生成
             </CardDescription>
@@ -219,8 +242,21 @@ function App() {
               {/* Left Column - Input Section */}
               <Card className="border-none shadow-none">
                 <CardContent className="space-y-8">
-                  <ApiKeyInput value={apiKey} onChange={setApiKey} />
-                  
+                  {isApiKeyFromEnv ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Gemini APIキー</Label>
+                      </div>
+                      <div className="relative">
+                        <div className="flex w-full rounded-md border border-border bg-muted px-3 py-2 text-sm">
+                          GEMINI_API_KEY ALREADY SET ENV
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <ApiKeyInput value={apiKey} onChange={setApiKey} />
+                  )}
+
                   <ImageUpload
                     images={images}
                     onImagesSelect={handleFiles}
@@ -240,9 +276,9 @@ function App() {
                     <TipTapEditor
                       value={prompt}
                       onChange={setPrompt}
-                      images={images.map(img => ({
+                      images={images.map((img) => ({
                         id: img.id,
-                        filename: img.filename
+                        filename: img.filename,
                       }))}
                       selectedSize={selectedSize}
                     />
@@ -269,7 +305,7 @@ function App() {
               {/* Right Column - Output Section */}
               <Card className="border-none shadow-none">
                 <CardContent>
-                  <GeneratedImage 
+                  <GeneratedImage
                     generatedImage={generatedImage}
                     isLoading={isLoading}
                     responseLog={responseLog}
