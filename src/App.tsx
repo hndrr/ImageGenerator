@@ -282,6 +282,21 @@ function App() {
     setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
+  const useGeneratedAsInput = (imageData: string) => {
+    const newImage: ImageItem = {
+      id: crypto.randomUUID(),
+      originalImage: imageData,
+      generatedImage: null,
+      status: "pending",
+      filename: `generated-image-${new Date().getTime()}.png`,
+    };
+
+    setImages((prev) => [...prev, newImage]);
+    setGeneratedImage(null);
+    setResponseLog(null);
+    setError(null);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground p-8">
       <div className="max-w-7xl mx-auto">
@@ -376,6 +391,7 @@ function App() {
                     isLoading={isLoading}
                     responseLog={responseLog}
                     error={error}
+                    onUseAsInput={useGeneratedAsInput}
                   />
                 </CardContent>
               </Card>
