@@ -1,42 +1,136 @@
-import React, { useState, useRef } from "react";
-import { Upload, Image as ImageIcon, Loader2, Key } from "lucide-react";
+import React, { useState } from "react";
+import { Image as ImageIcon, Loader2 } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { GeneratedImage } from "@/components/ui/generated-image";
+import { ApiKeyInput } from "@/components/ui/api-key-input";
+import { TipTapEditor } from "@/components/ui/tiptap-editor";
+import { SizeSelector } from "@/components/ui/size-selector";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+interface ImageItem {
+  id: string;
+  originalImage: string;
+  generatedImage: string | null;
+  status: "pending" | "generating" | "completed" | "error";
+  error?: string;
+  filename: string;
+}
+
+interface ResponseLog {
+  status: "success" | "error" | "generating";
+  timestamp: string;
+  imageGenerated: boolean;
+  error?: string;
+  prompt?: string;
+  size?: string;
+  rawResponse?: string;
+  requestData?: string;
+}
 
 function App() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string>("");
   const [apiKey, setApiKey] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [responseLog, setResponseLog] = useState<ResponseLog | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string>("1024x1024");
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
-        setGeneratedImage(null);
+  const handleFiles = (files: File[]) => {
+    const newImages = files.map(file => {
+      return new Promise<ImageItem>((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+          reject(new Error('画像ファイルのみアップロード可能です'));
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve({
+            id: crypto.randomUUID(),
+            originalImage: reader.result as string,
+            generatedImage: null,
+            status: "pending",
+            filename: file.name
+          });
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(newImages)
+      .then(loadedImages => {
+        setImages(prev => [...prev, ...loadedImages]);
         setError(null);
-      };
-      reader.readAsDataURL(file);
-    }
+        setResponseLog(null);
+        setGeneratedImage(null);
+      })
+      .catch(err => {
+        setError(err.message);
+        setResponseLog({
+          status: "error",
+          timestamp: new Date().toISOString(),
+          imageGenerated: false,
+          error: err.message
+        });
+      });
   };
 
-  const generateImage = async () => {
-    if (!selectedImage || !apiKey) {
-      setError("画像とAPIキーの両方が必要です");
+  const generateImages = async () => {
+    if (images.length === 0 || !apiKey) {
+      const errorMessage = "画像とAPIキーの両方が必要です";
+      setError(errorMessage);
+      setResponseLog({
+        status: "error",
+        timestamp: new Date().toISOString(),
+        imageGenerated: false,
+        error: errorMessage,
+        prompt: prompt,
+        size: selectedSize
+      });
       return;
     }
 
     setIsLoading(true);
     setError(null);
+    setGeneratedImage(null);
 
     try {
+      const contents = [
+        { text: prompt },
+        ...images.map(image => ({
+          inlineData: {
+            mimeType: "image/png",
+            data: image.originalImage.split(",")[1],
+          },
+        })),
+      ];
+
+      setResponseLog({
+        status: "generating",
+        timestamp: new Date().toISOString(),
+        imageGenerated: false,
+        prompt: prompt,
+        size: selectedSize,
+        requestData: JSON.stringify({
+          prompt,
+          size: selectedSize,
+          imageCount: images.length,
+          imageNames: images.map(img => img.filename)
+        }, null, 2)
+      });
+
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
         model: "gemini-2.0-flash-exp-image-generation",
@@ -45,140 +139,147 @@ function App() {
         } as any,
       });
 
-      const base64Image = selectedImage.split(",")[1];
-      const contents = [
-        { text: prompt },
-        {
-          inlineData: {
-            mimeType: "image/png",
-            data: base64Image,
-          },
-        },
-      ];
+      const result = await model.generateContent(contents);
+      const response = await result.response;
+      console.log("Raw response:", response);
 
-      const response = await model.generateContent(contents);
-
-      if (
-        response &&
-        response.response &&
-        response.response.candidates &&
-        response.response.candidates[0] &&
-        response.response.candidates[0].content &&
-        response.response.candidates[0].content.parts
-      ) {
-        for (const part of response.response.candidates[0].content.parts) {
-          if (part.inlineData) {
-            setGeneratedImage(`data:image/png;base64,${part.inlineData.data}`);
+      let imageGenerated = false;
+      if (response?.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData?.data) {
+            const generatedImageData = `data:image/png;base64,${part.inlineData.data}`;
+            setGeneratedImage(generatedImageData);
+            imageGenerated = true;
+            break;
           }
         }
-      } else {
-        setError(
-          "レスポンスの形式が予期せぬものでした。もう一度試してください。"
-        );
       }
+
+      if (!imageGenerated) {
+        throw new Error("画像データが見つかりませんでした");
+      }
+
+      setResponseLog({
+        status: "success",
+        timestamp: new Date().toISOString(),
+        imageGenerated: true,
+        prompt: prompt,
+        size: selectedSize,
+        rawResponse: JSON.stringify(response, null, 2),
+        requestData: JSON.stringify({
+          prompt,
+          size: selectedSize,
+          imageCount: images.length,
+          imageNames: images.map(img => img.filename)
+        }, null, 2)
+      });
     } catch (err) {
-      setError(
-        "画像の生成に失敗しました。APIキーが正しいことを確認してください。"
-      );
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : "画像の生成に失敗しました";
+      
+      setError(errorMessage);
+      setResponseLog({
+        status: "error",
+        timestamp: new Date().toISOString(),
+        imageGenerated: false,
+        error: errorMessage,
+        prompt: prompt,
+        size: selectedSize,
+        requestData: JSON.stringify({
+          prompt,
+          size: selectedSize,
+          imageCount: images.length,
+          imageNames: images.map(img => img.filename)
+        }, null, 2)
+      });
+      
       console.error("エラー:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const removeImage = (id: string) => {
+    setImages(prev => prev.filter(img => img.id !== id));
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="rounded-xl border border-border bg-card p-8">
-          <h1 className="text-3xl font-bold mb-8 text-center">
-            画像ジェネレーター
-          </h1>
+      <div className="max-w-7xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">Gemini画像ジェネレーター</CardTitle>
+            <CardDescription className="text-center">
+              複数の画像をアップロードして、AIで新しい画像を生成
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column - Input Section */}
+              <Card className="border-none shadow-none">
+                <CardContent className="space-y-8">
+                  <ApiKeyInput value={apiKey} onChange={setApiKey} />
+                  
+                  <ImageUpload
+                    images={images}
+                    onImagesSelect={handleFiles}
+                    onImageRemove={removeImage}
+                  />
 
-          <div className="space-y-8">
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">Gemini APIキー</Label>
-              <div className="relative">
-                <input
-                  type="password"
-                  id="apiKey"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring pr-10"
-                  placeholder="APIキーを入力してください"
-                />
-                <Key className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              </div>
+                  <div className="space-y-2">
+                    <Label>出力サイズ</Label>
+                    <SizeSelector
+                      value={selectedSize}
+                      onChange={setSelectedSize}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="prompt">プロンプト</Label>
+                    <TipTapEditor
+                      value={prompt}
+                      onChange={setPrompt}
+                      images={images.map(img => ({
+                        id: img.id,
+                        filename: img.filename
+                      }))}
+                      selectedSize={selectedSize}
+                    />
+                  </div>
+
+                  <div className="text-center">
+                    <Button
+                      onClick={generateImages}
+                      disabled={images.length === 0 || !apiKey || isLoading}
+                      size="lg"
+                      className="w-full"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                      )}
+                      画像を生成
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Right Column - Output Section */}
+              <Card className="border-none shadow-none">
+                <CardContent>
+                  <GeneratedImage 
+                    generatedImage={generatedImage}
+                    isLoading={isLoading}
+                    responseLog={responseLog}
+                    error={error}
+                  />
+                </CardContent>
+              </Card>
             </div>
-
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImageUpload}
-                accept="image/*"
-                className="hidden"
-              />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="mb-4"
-                variant="secondary"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                画像をアップロード
-              </Button>
-              {selectedImage && (
-                <img
-                  src={selectedImage}
-                  alt="選択された画像"
-                  className="max-h-64 mx-auto rounded-lg"
-                />
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="prompt">プロンプト</Label>
-              <Textarea
-                id="prompt"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={3}
-                placeholder="画像生成の指示を入力してください"
-              />
-            </div>
-
-            <div className="text-center">
-              <Button
-                onClick={generateImage}
-                disabled={!selectedImage || !apiKey || isLoading}
-                size="lg"
-              >
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                )}
-                画像を生成
-              </Button>
-            </div>
-
-            {error && (
-              <div className="text-destructive text-center">{error}</div>
-            )}
-
-            {generatedImage && (
-              <div className="border border-border rounded-lg p-4">
-                <h2 className="text-xl font-semibold mb-4 text-center">
-                  生成された画像
-                </h2>
-                <img
-                  src={generatedImage}
-                  alt="生成された画像"
-                  className="max-h-96 mx-auto rounded-lg"
-                />
-              </div>
-            )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
