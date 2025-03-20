@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Button } from "./button";
 import { Download, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ResponseLog {
   status: "success" | "error" | "generating";
@@ -20,9 +21,14 @@ interface GeneratedImageProps {
   error: string | null;
 }
 
-export function GeneratedImage({ generatedImage, isLoading, responseLog, error }: GeneratedImageProps) {
+export function GeneratedImage({
+  generatedImage,
+  isLoading,
+  responseLog,
+  error,
+}: GeneratedImageProps) {
   const handleDownload = (imageData: string) => {
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = imageData;
     link.download = `generated-image-${new Date().getTime()}.png`;
     document.body.appendChild(link);
@@ -30,29 +36,29 @@ export function GeneratedImage({ generatedImage, isLoading, responseLog, error }
     document.body.removeChild(link);
   };
 
-  const getStatusColor = (status: ResponseLog['status']) => {
+  const getStatusColor = (status: ResponseLog["status"]) => {
     switch (status) {
-      case 'success':
-        return 'text-green-500';
-      case 'error':
-        return 'text-destructive';
-      case 'generating':
-        return 'text-yellow-500';
+      case "success":
+        return "text-green-500";
+      case "error":
+        return "text-destructive";
+      case "generating":
+        return "text-yellow-500";
       default:
-        return 'text-muted-foreground';
+        return "text-muted-foreground";
     }
   };
 
-  const getStatusText = (status: ResponseLog['status']) => {
+  const getStatusText = (status: ResponseLog["status"]) => {
     switch (status) {
-      case 'success':
-        return '生成完了';
-      case 'error':
-        return 'エラー';
-      case 'generating':
-        return '生成中...';
+      case "success":
+        return "生成完了";
+      case "error":
+        return "エラー";
+      case "generating":
+        return "生成中...";
       default:
-        return 'Unknown';
+        return "Unknown";
     }
   };
 
@@ -76,7 +82,7 @@ export function GeneratedImage({ generatedImage, isLoading, responseLog, error }
                     alt="生成された画像"
                     className="w-full rounded-lg object-contain h-96"
                   />
-                  <Button 
+                  <Button
                     onClick={() => handleDownload(generatedImage)}
                     className="w-full"
                     variant="secondary"
@@ -97,10 +103,8 @@ export function GeneratedImage({ generatedImage, isLoading, responseLog, error }
           </Card>
         </CardContent>
       </div>
-      
-      {error && (
-        <div className="text-destructive text-center">{error}</div>
-      )}
+
+      {error && <div className="text-destructive text-center">{error}</div>}
 
       <div>
         <CardHeader className="px-0">
@@ -113,16 +117,23 @@ export function GeneratedImage({ generatedImage, isLoading, responseLog, error }
                 <>
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                      {new Date(responseLog.timestamp).toLocaleString('ja-JP')}
+                      {new Date(responseLog.timestamp).toLocaleString("ja-JP")}
                     </div>
-                    <div className={cn("text-sm font-medium", getStatusColor(responseLog.status))}>
+                    <div
+                      className={cn(
+                        "text-sm font-medium",
+                        getStatusColor(responseLog.status)
+                      )}
+                    >
                       {getStatusText(responseLog.status)}
                     </div>
                   </div>
 
                   {responseLog.prompt && (
                     <div>
-                      <div className="text-muted-foreground mb-1">プロンプト:</div>
+                      <div className="text-muted-foreground mb-1">
+                        プロンプト:
+                      </div>
                       <div className="bg-secondary/50 rounded-md p-2 whitespace-pre-wrap">
                         {responseLog.prompt}
                       </div>
@@ -131,7 +142,9 @@ export function GeneratedImage({ generatedImage, isLoading, responseLog, error }
 
                   {responseLog.size && (
                     <div>
-                      <div className="text-muted-foreground mb-1">出力サイズ:</div>
+                      <div className="text-muted-foreground mb-1">
+                        出力サイズ:
+                      </div>
                       <div className="bg-secondary/50 rounded-md p-2">
                         {responseLog.size}
                       </div>
@@ -140,7 +153,9 @@ export function GeneratedImage({ generatedImage, isLoading, responseLog, error }
 
                   {responseLog.requestData && (
                     <div>
-                      <div className="text-muted-foreground mb-1">リクエスト情報:</div>
+                      <div className="text-muted-foreground mb-1">
+                        リクエスト情報:
+                      </div>
                       <div className="bg-secondary/50 rounded-md p-2 whitespace-pre-wrap">
                         {responseLog.requestData}
                       </div>
@@ -158,7 +173,9 @@ export function GeneratedImage({ generatedImage, isLoading, responseLog, error }
 
                   {responseLog.rawResponse && (
                     <div>
-                      <div className="text-muted-foreground mb-1">レスポンス:</div>
+                      <div className="text-muted-foreground mb-1">
+                        レスポンス:
+                      </div>
                       <details>
                         <summary className="cursor-pointer hover:text-primary transition-colors">
                           詳細を表示
@@ -181,8 +198,4 @@ export function GeneratedImage({ generatedImage, isLoading, responseLog, error }
       </div>
     </div>
   );
-}
-
-function cn(...classes: string[]) {
-  return classes.filter(Boolean).join(' ');
 }

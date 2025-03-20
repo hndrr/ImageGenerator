@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Image as ImageIcon, Loader2 } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { GenerateContentRequest } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -15,7 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
 interface ImageItem {
   id: string;
   originalImage: string;
@@ -150,7 +150,7 @@ function App() {
         model: "gemini-2.0-flash-exp-image-generation",
         generationConfig: {
           responseModalities: ["Text", "Image"],
-        } as any,
+        } as GenerateContentRequest["generationConfig"],
       });
 
       const result = await model.generateContent(contents);
