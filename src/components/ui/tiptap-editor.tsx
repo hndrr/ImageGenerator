@@ -124,24 +124,51 @@ export function TipTapEditor({
         heading: false,
         orderedList: false,
         blockquote: false,
+        hardBreak: {
+          keepMarks: true,
+        },
       }),
       Placeholder.configure({
         placeholder,
+        emptyEditorClass: "is-editor-empty",
       }),
     ],
     content: value,
+    editorProps: {
+      attributes: {
+        class: "min-h-[200px] outline-none",
+      },
+      handleKeyDown: (view, event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          view.dispatch(view.state.tr.insertText("\n"));
+          return true;
+        }
+        return false;
+      },
+    },
     onUpdate: ({ editor }) => {
-      const content = editor
+      const lines = editor
         .getHTML()
         .replace(/<p>/g, "")
-        .replace(/<\/p>/g, "\n")
-        .replace(/<br>/g, "\n")
-        .split("\n")
+        .replace(/<\/p>/g, "")
+        .split(/<br\/?>/g)
         .map((line) => line.trim())
-        .filter((line) => line.length > 0)
+        .filter((line) => line.length > 0);
+
+      if (lines.length === 0) {
+        onChange("");
+        return;
+      }
+
+      const content = lines
+        .map((line) => {
+          if (line.startsWith("-")) return line;
+          return `- ${line}`;
+        })
         .join("\n");
 
-      const finalContent = content ? `${systemPrompt}\n\n${content}` : content;
+      const finalContent = `${systemPrompt}\n\n${content}`;
       onChange(finalContent);
     },
   });
@@ -150,39 +177,53 @@ export function TipTapEditor({
     return null;
   }
 
+  const insertTemplate = (text: string) => {
+    const currentContent = editor.getHTML();
+    const isEmpty = currentContent === "" || currentContent === "<p></p>";
+
+    if (isEmpty) {
+      editor.chain().focus().setContent(`- ${text}`).run();
+    } else {
+      editor.chain().focus().insertContent(`<br>- ${text}`).run();
+    }
+  };
+
   const insertImageReference = (filename: string) => {
     const imageNumber =
       images.findIndex((img) => img.filename === filename) + 1;
     const imageRef = `- ![image_${imageNumber}](${filename})`;
-    editor
-      .chain()
-      .focus()
-      .insertContent(imageRef + "\n")
-      .run();
+    const currentContent = editor.getHTML();
+    const isEmpty = currentContent === "" || currentContent === "<p></p>";
+
+    if (isEmpty) {
+      editor.chain().focus().setContent(imageRef).run();
+    } else {
+      editor.chain().focus().insertContent(`<br>${imageRef}`).run();
+    }
   };
 
   const insertAspectRatioTemplate = (text: string) => {
-    editor.chain().focus().insertContent(`- ${text}\n`).run();
+    insertTemplate(text);
   };
 
   const insertAngleTemplate = (text: string) => {
-    editor.chain().focus().insertContent(`- ${text}\n`).run();
+    insertTemplate(text);
   };
 
   const insertPoseTemplate = (text: string) => {
-    editor.chain().focus().insertContent(`- ${text}\n`).run();
+    insertTemplate(text);
   };
 
   const insertAccessoryTemplate = (text: string) => {
-    editor.chain().focus().insertContent(`- ${text}\n`).run();
+    insertTemplate(text);
   };
 
   const insertBackgroundTemplate = (text: string) => {
-    editor.chain().focus().insertContent(`- ${text}\n`).run();
+    insertTemplate(text);
   };
 
   const insertStyleTemplate = (text: string) => {
-    editor.chain().focus().insertContent(`- ${text}\n`).run();
+    insertTemplate(text);
   };
 
   const getAspectRatioFromSize = (size: string) => {
@@ -339,7 +380,7 @@ export function TipTapEditor({
       <div className={cn("rounded-b-md bg-transparent", className)}>
         <EditorContent
           editor={editor}
-          className="px-4 pb-3 min-h-[200px] prose prose-sm max-w-none prose-invert focus:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:px-1"
+          className="px-4 pb-3 min-h-[200px] prose prose-sm max-w-none prose-invert focus:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:px-1 [&_.ProseMirror]:h-full [&_.ProseMirror]:overflow-y-auto [&_.ProseMirror]:whitespace-pre-wrap"
         />
       </div>
     </div>
