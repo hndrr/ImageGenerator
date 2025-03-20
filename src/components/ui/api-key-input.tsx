@@ -10,7 +10,9 @@ export function ApiKeyInput({ value, onChange }: ApiKeyInputProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label htmlFor="apiKey">Gemini APIキー</Label>
+        <Label className="text-lg font-semibold" htmlFor="apiKey">
+          Gemini APIキー
+        </Label>
         <a
           href="https://aistudio.google.com/app/apikey"
           target="_blank"
