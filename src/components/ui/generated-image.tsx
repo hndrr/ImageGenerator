@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Button } from "./button";
 import { Download, Loader2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ImageModal } from "./image-modal";
 
 interface ResponseLog {
   status: "success" | "error" | "generating";
@@ -85,11 +86,13 @@ export function GeneratedImage({
                 </div>
               ) : generatedImage ? (
                 <div className="space-y-2">
-                  <img
-                    src={generatedImage}
-                    alt="生成された画像"
-                    className="w-full rounded-lg object-contain h-96"
-                  />
+                  <ImageModal image={generatedImage} alt="生成された画像">
+                    <img
+                      src={generatedImage}
+                      alt="生成された画像"
+                      className="w-full rounded-lg object-contain h-96 cursor-pointer"
+                    />
+                  </ImageModal>
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleDownload(generatedImage)}
