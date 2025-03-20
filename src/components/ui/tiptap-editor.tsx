@@ -4,14 +4,30 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import {
-  Image as ImageIcon,
-  Ratio as AspectRatio,
-  Camera as Angle,
-  User as Pose,
-  Glasses,
-  Palette,
-  Brush,
+  ImageIcon,
+  Ratio as AspectRatioIcon,
+  CameraIcon as AngleIcon,
+  User as PoseIcon,
+  GlassesIcon,
+  PaletteIcon,
+  BrushIcon,
+  ClockIcon,
+  HeartIcon,
+  FilterIcon,
+  CloudIcon,
 } from "lucide-react";
+import {
+  aspectRatioTemplates,
+  angleTemplates,
+  poseTemplates,
+  accessoryTemplates,
+  backgroundTemplates,
+  styleTemplates,
+  weatherTemplates,
+  moodTemplates,
+  filterTemplates,
+  timeTemplates,
+} from "@/lib/templates";
 
 interface TipTapEditorProps {
   value: string;
@@ -24,89 +40,6 @@ interface TipTapEditorProps {
 
 const systemPrompt =
   "Please follow the instructions below to change the image:";
-
-const aspectRatioTemplates = [
-  {
-    label: "横長",
-    text: "aspect:landscape",
-    ratio: (w: number, h: number) => w > h,
-  },
-  {
-    label: "縦長",
-    text: "aspect:portrait",
-    ratio: (w: number, h: number) => w < h,
-  },
-  {
-    label: "正方形",
-    text: "aspect:square",
-    ratio: (w: number, h: number) => w === h,
-  },
-];
-
-const angleTemplates = [
-  { label: "正面", text: "view:front view" },
-  { label: "俯瞰", text: "view:bird's eye view" },
-  { label: "アオリ", text: "view:low angle" },
-  { label: "斜め", text: "view:45 degree angle" },
-  { label: "クローズアップ", text: "view:close-up shot" },
-  { label: "引き", text: "view:full body shot" },
-];
-
-const poseTemplates = [
-  { label: "立ち", text: "pose:standing" },
-  { label: "座り", text: "pose:sitting" },
-  { label: "寝転び", text: "pose:lying down" },
-  { label: "歩き", text: "pose:walking" },
-  { label: "走り", text: "pose:running" },
-  { label: "ジャンプ", text: "pose:jumping" },
-];
-
-const accessoryTemplates = [
-  { label: "メガネ", text: "accessory:wearing glasses" },
-  { label: "サングラス", text: "accessory:wearing sunglasses" },
-  { label: "帽子", text: "accessory:wearing a hat" },
-  { label: "キャップ", text: "accessory:wearing a cap" },
-  { label: "ベレー帽", text: "accessory:wearing a beret" },
-  { label: "マフラー", text: "accessory:wearing a scarf" },
-  { label: "ネックレス", text: "accessory:wearing a necklace" },
-  { label: "イヤリング", text: "accessory:wearing earrings" },
-  { label: "バッグ", text: "accessory:holding a bag" },
-  { label: "傘", text: "accessory:holding an umbrella" },
-];
-
-const backgroundTemplates = [
-  { label: "自然", text: "background:nature scene" },
-  { label: "都会", text: "background:urban cityscape" },
-  { label: "室内", text: "background:indoor room" },
-  { label: "海", text: "background:beach and ocean" },
-  { label: "山", text: "background:mountain landscape" },
-  { label: "公園", text: "background:park" },
-  { label: "カフェ", text: "background:cafe interior" },
-  { label: "オフィス", text: "background:office space" },
-  { label: "学校", text: "background:school campus" },
-  { label: "夜景", text: "background:night city view" },
-  { label: "夕暮れ", text: "background:sunset sky" },
-  { label: "森林", text: "background:forest" },
-];
-
-const styleTemplates = [
-  { label: "写真調", text: "generate style:photorealistic" },
-  { label: "絵画調", text: "generate style:oil painting" },
-  { label: "水彩画", text: "generate style:watercolor" },
-  { label: "鉛筆画", text: "generate style:pencil sketch" },
-  { label: "パステル", text: "generate style:pastel art" },
-  { label: "アニメ調", text: "generate style:anime" },
-  { label: "漫画調", text: "generate style:manga" },
-  { label: "ピクサー風", text: "generate style:pixar" },
-  { label: "ジブリ風", text: "generate style:ghibli" },
-  { label: "モノクロ", text: "generate style:black and white" },
-  { label: "セピア", text: "generate style:sepia" },
-  { label: "ネオン", text: "generate style:neon" },
-  { label: "サイバーパンク", text: "generate style:cyberpunk" },
-  { label: "レトロ", text: "generate style:retro" },
-  { label: "ミニマル", text: "generate style:minimal" },
-  { label: "抽象的", text: "generate style:abstract" },
-];
 
 export function TipTapEditor({
   value,
@@ -141,32 +74,28 @@ export function TipTapEditor({
       handleKeyDown: (view, event) => {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
-          view.dispatch(view.state.tr.insertText("\n"));
+          const br = view.state.schema.nodes.hardBreak.create();
+          view.dispatch(view.state.tr.replaceSelectionWith(br));
           return true;
         }
         return false;
       },
     },
     onUpdate: ({ editor }) => {
-      const lines = editor
+      const content = editor
         .getHTML()
         .replace(/<p>/g, "")
         .replace(/<\/p>/g, "")
         .split(/<br\/?>/g)
         .map((line) => line.trim())
-        .filter((line) => line.length > 0);
+        .filter((line) => line.length > 0)
+        .map((line) => (line.startsWith("-") ? line : `- ${line}`))
+        .join("\n");
 
-      if (lines.length === 0) {
+      if (!content) {
         onChange("");
         return;
       }
-
-      const content = lines
-        .map((line) => {
-          if (line.startsWith("-")) return line;
-          return `- ${line}`;
-        })
-        .join("\n");
 
       const finalContent = `${systemPrompt}\n\n${content}`;
       onChange(finalContent);
@@ -182,7 +111,7 @@ export function TipTapEditor({
     const isEmpty = currentContent === "" || currentContent === "<p></p>";
 
     if (isEmpty) {
-      editor.chain().focus().setContent(`- ${text}`).run();
+      editor.chain().focus().setContent(`<p>- ${text}</p>`).run();
     } else {
       editor.chain().focus().insertContent(`<br>- ${text}`).run();
     }
@@ -191,12 +120,12 @@ export function TipTapEditor({
   const insertImageReference = (filename: string) => {
     const imageNumber =
       images.findIndex((img) => img.filename === filename) + 1;
-    const imageRef = `- ![image_${imageNumber}](${filename})`;
+    const imageRef = `![image_${imageNumber}](${filename})`;
     const currentContent = editor.getHTML();
     const isEmpty = currentContent === "" || currentContent === "<p></p>";
 
     if (isEmpty) {
-      editor.chain().focus().setContent(imageRef).run();
+      editor.chain().focus().setContent(`<p>${imageRef}</p>`).run();
     } else {
       editor.chain().focus().insertContent(`<br>${imageRef}`).run();
     }
@@ -223,6 +152,22 @@ export function TipTapEditor({
   };
 
   const insertStyleTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertTimeTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertWeatherTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertMoodTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertFilterTemplate = (text: string) => {
     insertTemplate(text);
   };
 
@@ -267,7 +212,7 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <AspectRatio className="h-4 w-4" />
+            <AspectRatioIcon className="h-4 w-4" />
             <span>構図</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -288,7 +233,7 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <Angle className="h-4 w-4" />
+            <AngleIcon className="h-4 w-4" />
             <span>アングル</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -306,7 +251,7 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <Pose className="h-4 w-4" />
+            <PoseIcon className="h-4 w-4" />
             <span>ポーズ</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -324,7 +269,7 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <Glasses className="h-4 w-4" />
+            <GlassesIcon className="h-4 w-4" />
             <span>小道具</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
@@ -342,7 +287,7 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <Palette className="h-4 w-4" />
+            <PaletteIcon className="h-4 w-4" />
             <span>背景</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
@@ -360,7 +305,7 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <Brush className="h-4 w-4" />
+            <BrushIcon className="h-4 w-4" />
             <span>スタイル</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
@@ -368,6 +313,78 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertStyleTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <ClockIcon className="h-4 w-4" />
+            <span>時間</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {timeTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertTimeTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <CloudIcon className="h-4 w-4" />
+            <span>天気</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {weatherTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertWeatherTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <HeartIcon className="h-4 w-4" />
+            <span>雰囲気</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {moodTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertMoodTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <FilterIcon className="h-4 w-4" />
+            <span>フィルター</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {filterTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertFilterTemplate(template.text)}
                 className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
               >
                 {template.label}
