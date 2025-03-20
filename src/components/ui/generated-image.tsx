@@ -65,15 +65,21 @@ export function GeneratedImage({
   return (
     <div className="space-y-6">
       <div>
-        <CardHeader className="px-0">
+        <CardHeader className="px-0 p-1">
           <CardTitle className="text-lg">生成された画像</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
           <Card className="overflow-hidden">
-            <CardContent className="p-4">
+            <CardContent className="p-4 bg-white/10">
               {isLoading ? (
                 <div className="h-96 flex items-center justify-center bg-secondary rounded-lg">
                   <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="h-96 flex items-center justify-center">
+                  <p className="text-destructive text-center whitespace-pre-line">
+                    {error}
+                  </p>
                 </div>
               ) : generatedImage ? (
                 <div className="space-y-2">
@@ -104,10 +110,8 @@ export function GeneratedImage({
         </CardContent>
       </div>
 
-      {error && <div className="text-destructive text-center">{error}</div>}
-
       <div>
-        <CardHeader className="px-0">
+        <CardHeader className="px-0 p-1">
           <CardTitle className="text-lg">ログ</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
