@@ -1,5 +1,5 @@
 import React, { useRef, DragEvent } from "react";
-import { Upload, X } from "lucide-react";
+import { Loader2Icon, Upload, X } from "lucide-react";
 import { Button } from "./button";
 
 interface ImageItem {
@@ -17,7 +17,11 @@ interface ImageUploadProps {
   onImageRemove: (id: string) => void;
 }
 
-export function ImageUpload({ images, onImagesSelect, onImageRemove }: ImageUploadProps) {
+export function ImageUpload({
+  images,
+  onImagesSelect,
+  onImageRemove,
+}: ImageUploadProps) {
   const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,7 +50,7 @@ export function ImageUpload({ images, onImagesSelect, onImageRemove }: ImageUplo
     const files = event.target.files ? Array.from(event.target.files) : [];
     onImagesSelect(files);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -88,7 +92,7 @@ export function ImageUpload({ images, onImagesSelect, onImageRemove }: ImageUplo
                   </button>
                   {image.status === "generating" && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                      <Loader2 className="h-6 w-6 animate-spin text-white" />
+                      <Loader2Icon className="h-6 w-6 animate-spin text-white" />
                     </div>
                   )}
                 </div>
@@ -111,9 +115,7 @@ export function ImageUpload({ images, onImagesSelect, onImageRemove }: ImageUplo
             <p className="text-lg font-medium mb-2">
               ここに画像をドラッグ＆ドロップ
             </p>
-            <p className="text-sm text-muted-foreground mb-4">
-              または
-            </p>
+            <p className="text-sm text-muted-foreground mb-4">または</p>
             <Button
               onClick={() => fileInputRef.current?.click()}
               variant="secondary"

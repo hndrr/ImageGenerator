@@ -115,3 +115,31 @@ export const filterTemplates = [
   { label: "ローキー", text: "filter:low key" },
   { label: "クロスプロセス", text: "filter:cross process" },
 ];
+
+export const lensTemplates = [
+  { label: "標準レンズ", text: "lens:standard" },
+  { label: "広角レンズ", text: "lens:wide angle" },
+  { label: "望遠レンズ", text: "lens:telephoto" },
+  { label: "魚眼レンズ", text: "lens:fisheye" },
+  { label: "マクロレンズ", text: "lens:macro" },
+  { label: "ティルトシフト", text: "lens:tilt-shift" },
+  { label: "ポートレートレンズ", text: "lens:portrait" },
+  { label: "ボケ味", text: "lens:bokeh effect" },
+  { label: "レンズフレア", text: "lens:lens flare" },
+];
+
+export const clothingTemplates = [
+  { label: "カジュアル", text: "clothing:casual outfit" },
+  { label: "フォーマル", text: "clothing:formal outfit" },
+  { label: "ビジネス", text: "clothing:business attire" },
+  { label: "スポーツウェア", text: "clothing:sportswear" },
+  { label: "水着", text: "clothing:swimwear" },
+  { label: "ドレス", text: "clothing:dress" },
+  { label: "スーツ", text: "clothing:suit" },
+  { label: "制服", text: "clothing:uniform" },
+  { label: "着物", text: "clothing:kimono" },
+  { label: "コスプレ", text: "clothing:cosplay" },
+  { label: "ゴシック", text: "clothing:gothic style" },
+  { label: "ストリート", text: "clothing:street fashion" },
+  { label: "ヴィンテージ", text: "clothing:vintage fashion" },
+];
