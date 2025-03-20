@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import {
   ImageIcon,
-  Ratio as AspectRatioIcon,
   CameraIcon as AngleIcon,
   User as PoseIcon,
   GlassesIcon,
@@ -17,7 +16,6 @@ import {
   CloudIcon,
 } from "lucide-react";
 import {
-  aspectRatioTemplates,
   angleTemplates,
   poseTemplates,
   accessoryTemplates,
@@ -97,7 +95,13 @@ export function TipTapEditor({
         return;
       }
 
-      const finalContent = `${systemPrompt}\n\n${content}`;
+      let finalContent = `${systemPrompt}\n\n${content}`;
+
+      // selectedSizeがある場合はpromptに追加
+      if (selectedSize) {
+        finalContent = `${systemPrompt}\n\n- ${selectedSize}\n${content}`;
+      }
+
       onChange(finalContent);
     },
   });
@@ -129,10 +133,6 @@ export function TipTapEditor({
     } else {
       editor.chain().focus().insertContent(`<br>${imageRef}`).run();
     }
-  };
-
-  const insertAspectRatioTemplate = (text: string) => {
-    insertTemplate(text);
   };
 
   const insertAngleTemplate = (text: string) => {
@@ -171,18 +171,6 @@ export function TipTapEditor({
     insertTemplate(text);
   };
 
-  const getAspectRatioFromSize = (size: string) => {
-    if (!size) return null;
-    const [width, height] = size.split("x").map(Number);
-    return aspectRatioTemplates.find((template) =>
-      template.ratio(width, height)
-    );
-  };
-
-  const currentAspectRatio = selectedSize
-    ? getAspectRatioFromSize(selectedSize)
-    : null;
-
   return (
     <div className="space-y-2 border border-border rounded-lg">
       <div className="flex items-center gap-1 rounded-t-md border-b border-border bg-transparent p-1.5 flex-wrap">
@@ -207,27 +195,6 @@ export function TipTapEditor({
                   {`image_${index + 1}: ${image.filename}`}
                 </button>
               ))}
-          </div>
-        </div>
-
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <AspectRatioIcon className="h-4 w-4" />
-            <span>構図</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {aspectRatioTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertAspectRatioTemplate(template.text)}
-                className={cn(
-                  "w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate",
-                  currentAspectRatio?.label === template.label && "font-bold"
-                )}
-              >
-                {template.label}
-              </button>
-            ))}
           </div>
         </div>
 

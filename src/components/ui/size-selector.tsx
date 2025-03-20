@@ -7,11 +7,31 @@ interface SizeSelectorProps {
 }
 
 const sizes = [
-  { label: "16:9", value: "1920x1080", description: "ワイド" },
-  { label: "9:16", value: "1080x1920", description: "スマートフォン" },
-  { label: "4:3", value: "1600x1200", description: "標準" },
-  { label: "3:4", value: "1200x1600", description: "ポートレート" },
-  { label: "1:1", value: "1024x1024", description: "正方形" },
+  {
+    label: "16:9",
+    value: "wide rectangular image with 16:9 aspect ratio",
+    description: "ワイド",
+  },
+  {
+    label: "9:16",
+    value: "wide rectangular image with 9:16 aspect ratio",
+    description: "ランドスケープ",
+  },
+  {
+    label: "4:3",
+    value: "rectangular image with 4:3 aspect ratio",
+    description: "スタンダード",
+  },
+  {
+    label: "3:4",
+    value: "rectangular image with 3:4 aspect ratio",
+    description: "ポートレート",
+  },
+  {
+    label: "1:1",
+    value: "square image with 1:1 aspect ratio",
+    description: "正方形",
+  },
 ];
 
 export function SizeSelector({ value, onChange }: SizeSelectorProps) {
