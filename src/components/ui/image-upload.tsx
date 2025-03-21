@@ -57,14 +57,17 @@ export function ImageUpload({
 
   return (
     <div
-      className={`border-2 border-dashed rounded-lg transition-colors duration-200 ${
+      className={`border-2 border-dashed rounded-lg transition-all duration-200 group ${
         isDragging
-          ? "border-primary bg-primary/5"
+          ? "border-primary bg-primary/10 scale-[1.02]"
+          : images.length === 0
+          ? "border-border hover:border-primary hover:bg-primary/5"
           : "border-border hover:border-primary/50"
-      }`}
+      } ${images.length === 0 ? "cursor-pointer" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={() => images.length === 0 && fileInputRef.current?.click()}
     >
       <input
         type="file"
@@ -112,19 +115,14 @@ export function ImageUpload({
           </div>
         ) : (
           <>
-            <div className="mb-4 p-4 rounded-full bg-secondary">
-              <Upload className="h-8 w-8" />
+            <div className="mb-4 p-4 rounded-full bg-secondary transition-transform group-hover:scale-110">
+              <Upload className="h-8 w-8 transition-transform group-hover:translate-y-[-2px]" />
             </div>
             <p className="text-lg font-medium mb-2">
               ここに画像をドラッグ＆ドロップ
             </p>
             <p className="text-sm text-muted-foreground mb-4">または</p>
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              variant="secondary"
-            >
-              画像を選択
-            </Button>
+            <p className="text-lg font-medium">クリックして画像を選択</p>
           </>
         )}
       </div>

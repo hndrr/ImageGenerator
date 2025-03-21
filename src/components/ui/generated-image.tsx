@@ -10,6 +10,7 @@ interface ResponseLog {
   imageGenerated: boolean;
   error?: string;
   prompt?: string;
+  negativePrompt?: string;
   size?: string;
   rawResponse?: string;
   requestData?: string;
@@ -184,10 +185,25 @@ export function GeneratedImage({
                         プロンプト:
                       </div>
                       <div className="bg-secondary/50 rounded-md p-2 whitespace-pre-wrap">
-                        {responseLog.prompt}
+                        {responseLog.prompt.replace(
+                          /\n\n\[NEGATIVE PROMPT\].*$|\n\nAvoid including these elements:.+$|\n\nDo not include:.+$/,
+                          ""
+                        )}
                       </div>
                     </div>
                   )}
+
+                  {responseLog.negativePrompt &&
+                    responseLog.negativePrompt.trim() !== "" && (
+                      <div>
+                        <div className="text-muted-foreground mb-1">
+                          <strong>ネガティブプロンプト:</strong>
+                        </div>
+                        <div className="bg-destructive/10 text-destructive-foreground rounded-md p-2 whitespace-pre-wrap border border-destructive/20">
+                          {responseLog.negativePrompt}
+                        </div>
+                      </div>
+                    )}
 
                   {responseLog.size && (
                     <div>
