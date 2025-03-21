@@ -13,6 +13,9 @@ interface ResponseLog {
   size?: string;
   rawResponse?: string;
   requestData?: string;
+  description?: string | null;
+  retryCount?: number;
+  maxRetries?: number;
 }
 
 interface GeneratedImageProps {
@@ -59,6 +62,14 @@ export function GeneratedImage({
       case "error":
         return "エラー";
       case "generating":
+        if (
+          responseLog?.retryCount !== undefined &&
+          responseLog?.maxRetries !== undefined
+        ) {
+          return `生成中... [${responseLog.retryCount + 1}/${
+            responseLog.maxRetries
+          }]`;
+        }
         return "生成中...";
       default:
         return "Unknown";
@@ -75,8 +86,16 @@ export function GeneratedImage({
           <Card className="overflow-hidden">
             <CardContent className="p-4 bg-white/10">
               {isLoading ? (
-                <div className="h-96 flex items-center justify-center bg-secondary rounded-lg">
-                  <Loader2 className="h-8 w-8 animate-spin" />
+                <div className="h-96 flex flex-col items-center justify-center bg-secondary rounded-lg">
+                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                  {responseLog?.status === "generating" &&
+                    responseLog?.retryCount !== undefined &&
+                    responseLog?.maxRetries !== undefined && (
+                      <p className="text-center text-sm text-muted-foreground">
+                        生成中... [{responseLog.retryCount + 1}/
+                        {responseLog.maxRetries}]
+                      </p>
+                    )}
                 </div>
               ) : error ? (
                 <div className="h-96 flex items-center justify-center">
@@ -93,6 +112,14 @@ export function GeneratedImage({
                       className="w-full rounded-lg object-contain h-96 cursor-pointer"
                     />
                   </ImageModal>
+                  {responseLog?.description && (
+                    <div className="mt-4 p-3 bg-secondary/50 rounded-lg text-sm">
+                      <p className="font-semibold mb-1">画像の説明:</p>
+                      <p className="whitespace-pre-line">
+                        {responseLog.description}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleDownload(generatedImage)}
