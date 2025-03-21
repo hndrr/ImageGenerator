@@ -41,17 +41,99 @@ import {
   lightingTemplates,
 } from "@/lib/templates";
 
+interface TemplateItem {
+  label: string;
+  text: string;
+}
+
+interface TemplateButtonProps {
+  icon: React.ReactNode;
+  label: string;
+  templates: TemplateItem[];
+  onSelect: (text: string) => void;
+  disabled?: boolean;
+}
+
+function TemplateButton({
+  icon,
+  label,
+  templates,
+  onSelect,
+  disabled = false,
+}: TemplateButtonProps) {
+  return (
+    <div className="relative group">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 px-2 gap-1"
+        disabled={disabled}
+      >
+        {icon}
+        <span>{label}</span>
+      </Button>
+      <div className="absolute top-full left-0 mt-1 max-md:w-36 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+        {templates.map((template) => (
+          <button
+            key={template.label}
+            onClick={() => onSelect(template.text)}
+            className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
+          >
+            {template.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface ImageReferenceButtonProps {
+  images: Array<{ id: string; filename: string }>;
+  onSelect: (filename: string) => void;
+}
+
+function ImageReferenceButton({ images, onSelect }: ImageReferenceButtonProps) {
+  return (
+    <div className="relative group">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 px-2 gap-1"
+        disabled={!(images.length > 0)}
+      >
+        <ImageIcon className="h-4 w-4" />
+        <span>画像名</span>
+      </Button>
+      <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+        {images.length > 0 &&
+          images.map((image, index) => (
+            <button
+              key={image.id}
+              onClick={() => onSelect(image.filename)}
+              className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
+            >
+              {`image_${index + 1}: ${image.filename}`}
+            </button>
+          ))}
+      </div>
+    </div>
+  );
+}
+
 interface TipTapEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   images?: Array<{ id: string; filename: string }>;
-  selectedSize?: string;
+  isNegativePrompt?: boolean;
 }
 
 const systemPrompt =
   "Please follow the instructions below to change the image:";
+
+const negativeSystemPrompt =
+  "[NEGATIVE PROMPT] Do not include the following elements in the generated image:";
 
 export function TipTapEditor({
   value,
@@ -59,6 +141,7 @@ export function TipTapEditor({
   placeholder = "画像生成の指示を入力してください",
   className,
   images = [],
+  isNegativePrompt = false,
 }: TipTapEditorProps) {
   // HTMLコンテンツを処理するユーティリティ関数
   const processContent = (html: string) => {
@@ -89,6 +172,12 @@ export function TipTapEditor({
     if (!content) {
       return "";
     }
+
+    // ネガティブプロンプトの場合は専用のシステムプロンプトを付ける
+    if (isNegativePrompt) {
+      return `${negativeSystemPrompt}\n\n${content}`;
+    }
+
     return `${systemPrompt}\n\n${content}`;
   };
 
@@ -185,384 +274,122 @@ export function TipTapEditor({
     }, 0);
   };
 
-  const insertAngleTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertPoseTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertAccessoryTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertBackgroundTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertStyleTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertTimeTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertWeatherTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertMoodTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertFilterTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertLensTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertClothingTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertExpressionTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertAgeTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertHairstyleTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertHaircolorTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
-  const insertLightingTemplate = (text: string) => {
-    insertTemplate(text);
-  };
-
   return (
     <div className="space-y-2 border border-border rounded-lg">
       <div className="flex items-center gap-1 rounded-t-md border-b border-border bg-transparent p-1.5 flex-wrap">
-        <div className="relative group">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 gap-1"
-            disabled={!(images.length > 0)}
-          >
-            <ImageIcon className="h-4 w-4" />
-            <span>画像名</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {images.length > 0 &&
-              images.map((image, index) => (
-                <button
-                  key={image.id}
-                  onClick={() => insertImageReference(image.filename)}
-                  className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-                >
-                  {`image_${index + 1}: ${image.filename}`}
-                </button>
-              ))}
-          </div>
-        </div>
+        <ImageReferenceButton images={images} onSelect={insertImageReference} />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <CalendarIcon className="h-4 w-4" />
-            <span>年齢</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {ageTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertAgeTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<CalendarIcon className="h-4 w-4" />}
+          label="年齢"
+          templates={ageTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <SmileIcon className="h-4 w-4" />
-            <span>表情</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {expressionTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertExpressionTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<SmileIcon className="h-4 w-4" />}
+          label="表情"
+          templates={expressionTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <PoseIcon className="h-4 w-4" />
-            <span>ポーズ</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {poseTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertPoseTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<PoseIcon className="h-4 w-4" />}
+          label="ポーズ"
+          templates={poseTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <ScissorsIcon className="h-4 w-4" />
-            <span>髪型</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {hairstyleTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertHairstyleTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<ScissorsIcon className="h-4 w-4" />}
+          label="髪型"
+          templates={hairstyleTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <PaintbrushIcon className="h-4 w-4" />
-            <span>髪色</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {haircolorTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertHaircolorTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<PaintbrushIcon className="h-4 w-4" />}
+          label="髪色"
+          templates={haircolorTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <ShirtIcon className="h-4 w-4" />
-            <span>服装</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {clothingTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertClothingTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<ShirtIcon className="h-4 w-4" />}
+          label="服装"
+          templates={clothingTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <GlassesIcon className="h-4 w-4" />
-            <span>小道具</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {accessoryTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertAccessoryTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<GlassesIcon className="h-4 w-4" />}
+          label="小道具"
+          templates={accessoryTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <AngleIcon className="h-4 w-4" />
-            <span>アングル</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {angleTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertAngleTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<AngleIcon className="h-4 w-4" />}
+          label="アングル"
+          templates={angleTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <ApertureIcon className="h-4 w-4" />
-            <span>レンズ</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {lensTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertLensTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<ApertureIcon className="h-4 w-4" />}
+          label="レンズ"
+          templates={lensTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <MountainIcon className="h-4 w-4" />
-            <span>背景</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {backgroundTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertBackgroundTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<MountainIcon className="h-4 w-4" />}
+          label="背景"
+          templates={backgroundTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <ClockIcon className="h-4 w-4" />
-            <span>時間</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {timeTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertTimeTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<ClockIcon className="h-4 w-4" />}
+          label="時間"
+          templates={timeTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <CloudIcon className="h-4 w-4" />
-            <span>天気</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {weatherTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertWeatherTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<CloudIcon className="h-4 w-4" />}
+          label="天気"
+          templates={weatherTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <LampIcon className="h-4 w-4" />
-            <span>照明</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {lightingTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertLightingTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<LampIcon className="h-4 w-4" />}
+          label="照明"
+          templates={lightingTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <HeartIcon className="h-4 w-4" />
-            <span>雰囲気</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {moodTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertMoodTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<HeartIcon className="h-4 w-4" />}
+          label="雰囲気"
+          templates={moodTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <FilterIcon className="h-4 w-4" />
-            <span>フィルター</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {filterTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertFilterTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<FilterIcon className="h-4 w-4" />}
+          label="フィルター"
+          templates={filterTemplates}
+          onSelect={insertTemplate}
+        />
 
-        <div className="relative group">
-          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <BrushIcon className="h-4 w-4" />
-            <span>スタイル</span>
-          </Button>
-          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {styleTemplates.map((template) => (
-              <button
-                key={template.label}
-                onClick={() => insertStyleTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
-              >
-                {template.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <TemplateButton
+          icon={<BrushIcon className="h-4 w-4" />}
+          label="スタイル"
+          templates={styleTemplates}
+          onSelect={insertTemplate}
+        />
       </div>
 
       <div className={cn("rounded-b-md bg-transparent", className)}>
