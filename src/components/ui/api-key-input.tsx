@@ -17,7 +17,7 @@ export function ApiKeyInput({
 }: ApiKeyInputProps) {
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-sm:flex-col max-sm:items-start max-sm:gap-2">
         <Label className="text-lg font-semibold" htmlFor="apiKey">
           Gemini APIキー
         </Label>
