@@ -10,6 +10,7 @@ import { ApiKeyInput } from "@/components/ui/api-key-input";
 import { TipTapEditor } from "@/components/ui/tiptap-editor";
 import { SizeSelector } from "@/components/ui/size-selector";
 import { saveEncryptedApiKey, getDecryptedApiKey } from "@/lib/crypto";
+import { logEvent } from "@/lib/analytics";
 import {
   Card,
   CardContent,
@@ -80,6 +81,9 @@ function App() {
   }, [apiKey, isApiKeyFromEnv, shouldSaveApiKey]);
 
   const handleFiles = (files: File[]) => {
+    // Google Analyticsでファイルのアップロードを追跡
+    logEvent("User Action", "Upload", "Image Upload", files.length);
+
     const newImages = files.map((file) => {
       return new Promise<ImageItem>((resolve, reject) => {
         if (!file.type.startsWith("image/")) {
@@ -135,9 +139,17 @@ function App() {
       return;
     }
 
+    // Google Analyticsで画像生成を追跡
+    logEvent("User Action", "Generate", "Image Generation", images.length);
+
     setIsLoading(true);
     setError(null);
     setGeneratedImage(null);
+
+    if (!prompt || prompt.trim() === "") {
+      setError("プロンプトが必要です");
+      return;
+    }
 
     // プロンプトチェックとデバッグ
     console.log("Original prompt:", prompt);
@@ -279,10 +291,14 @@ function App() {
   };
 
   const removeImage = (id: string) => {
+    // Google Analyticsで画像削除を追跡
+    logEvent("User Action", "Remove", "Image Removal");
     setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   const useGeneratedAsInput = (imageData: string) => {
+    // Google Analyticsで生成済み画像の再利用を追跡
+    logEvent("User Action", "Reuse", "Generated Image Reuse");
     const newImage: ImageItem = {
       id: crypto.randomUUID(),
       originalImage: imageData,
