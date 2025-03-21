@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { ImageIcon, Loader2, LayoutIcon } from "lucide-react";
+import {
+  ImageIcon,
+  Loader2,
+  LayoutIcon,
+  BanIcon,
+  TextIcon,
+} from "lucide-react";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { GenerateContentRequest } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
@@ -18,6 +24,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface ImageItem {
   id: string;
@@ -34,6 +46,7 @@ interface ResponseLog {
   imageGenerated: boolean;
   error?: string;
   prompt?: string;
+  negativePrompt?: string;
   size?: string;
   rawResponse?: string;
   requestData?: string;
@@ -47,6 +60,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string>("");
+  const [negativePrompt, setNegativePrompt] = useState<string>("");
   const [apiKey, setApiKey] = useState<string>("");
   const [shouldSaveApiKey, setShouldSaveApiKey] = useState<boolean>(false);
   const [responseLog, setResponseLog] = useState<ResponseLog | null>(null);
@@ -137,6 +151,7 @@ function App() {
         imageGenerated: false,
         error: errorMessage,
         prompt: prompt,
+        negativePrompt: negativePrompt,
         size: selectedSize,
       });
       return;
@@ -196,6 +211,12 @@ function App() {
           { text: string } | { inlineData: { mimeType: string; data: string } }
         > = [{ text: finalPrompt }];
 
+        // ネガティブプロンプトがある場合は指示文を追加
+        if (negativePrompt && negativePrompt.trim() !== "") {
+          const textContent = contents[0] as { text: string };
+          textContent.text += `\n\n[NEGATIVE PROMPT] ${negativePrompt}`;
+        }
+
         // 画像がある場合は追加
         if (images.length > 0) {
           images.forEach((image) => {
@@ -214,12 +235,14 @@ function App() {
           timestamp: new Date().toISOString(),
           imageGenerated: false,
           prompt: finalPrompt,
+          negativePrompt: negativePrompt,
           size: selectedSize,
           retryCount: retryCount,
           maxRetries: maxRetries,
           requestData: JSON.stringify(
             {
               prompt: finalPrompt,
+              negativePrompt: negativePrompt,
               size: selectedSize,
               imageCount: images.length,
               imageNames: images.map((img) => img.filename),
@@ -372,12 +395,14 @@ function App() {
           timestamp: new Date().toISOString(),
           imageGenerated: true,
           prompt: finalPrompt,
+          negativePrompt: negativePrompt,
           size: selectedSize,
           description: imageDescription,
           rawResponse: JSON.stringify(response, null, 2),
           requestData: JSON.stringify(
             {
               prompt: finalPrompt,
+              negativePrompt: negativePrompt,
               size: selectedSize,
               imageCount: images.length,
               imageNames: images.map((img) => img.filename),
@@ -397,10 +422,12 @@ function App() {
           imageGenerated: false,
           error: errorMessage,
           prompt: finalPrompt,
+          negativePrompt: negativePrompt,
           size: selectedSize,
           requestData: JSON.stringify(
             {
               prompt: finalPrompt,
+              negativePrompt: negativePrompt,
               size: selectedSize,
               imageCount: images.length,
               imageNames: images.map((img) => img.filename),
@@ -444,7 +471,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8">
+    <div className="min-h-screen bg-background text-foreground p-8 max-md:p-4 w-full">
       <div className="max-w-7xl mx-auto">
         <Card>
           <CardHeader>
@@ -455,7 +482,7 @@ function App() {
               画像とプロンプトでAIが新しい画像を生成します
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-md:p-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left Column - Input Section */}
               <Card className="border-none shadow-none">
@@ -501,6 +528,7 @@ function App() {
 
                   <div className="space-y-2">
                     <Label className="text-lg font-semibold" htmlFor="prompt">
+                      <TextIcon className="inline-block mr-2 h-5 w-5" />
                       プロンプト
                     </Label>
                     <TipTapEditor
@@ -510,9 +538,36 @@ function App() {
                         id: img.id,
                         filename: img.filename,
                       }))}
-                      selectedSize={selectedSize}
                     />
                   </div>
+
+                  <Accordion type="single" collapsible className="mt-4">
+                    <AccordionItem
+                      value="negative-prompt"
+                      className="border-b-0"
+                    >
+                      <AccordionTrigger className="py-2 px-0 hover:no-underline">
+                        <div className="flex items-center">
+                          <BanIcon className="mr-2 h-5 w-5 text-destructive" />
+                          <span className="text-lg font-semibold text-destructive">
+                            ネガティブプロンプト [EXPERIMENTAL]
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <TipTapEditor
+                          value={negativePrompt}
+                          onChange={setNegativePrompt}
+                          placeholder="生成したくない要素を入力してください"
+                          images={images.map((img) => ({
+                            id: img.id,
+                            filename: img.filename,
+                          }))}
+                          isNegativePrompt={true}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
 
                   <div className="text-center">
                     <Button
