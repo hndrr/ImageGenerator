@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ImageIcon, Loader2, LayoutIcon } from "lucide-react";
+import { ImageIcon, Loader2, LayoutIcon, BanIcon } from "lucide-react";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { GenerateContentRequest } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ interface ResponseLog {
   imageGenerated: boolean;
   error?: string;
   prompt?: string;
+  negativePrompt?: string;
   size?: string;
   rawResponse?: string;
   requestData?: string;
@@ -47,6 +48,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string>("");
+  const [negativePrompt, setNegativePrompt] = useState<string>("");
   const [apiKey, setApiKey] = useState<string>("");
   const [shouldSaveApiKey, setShouldSaveApiKey] = useState<boolean>(false);
   const [responseLog, setResponseLog] = useState<ResponseLog | null>(null);
@@ -137,6 +139,7 @@ function App() {
         imageGenerated: false,
         error: errorMessage,
         prompt: prompt,
+        negativePrompt: negativePrompt,
         size: selectedSize,
       });
       return;
@@ -161,11 +164,20 @@ function App() {
     // サイズを含むプロンプトを作成
     let finalPrompt = prompt;
 
+    // ネガティブプロンプトがある場合は追加
+    const negativePromptFormatted =
+      negativePrompt.trim() !== ""
+        ? `\n\nDo not include: ${negativePrompt}`
+        : "";
+
     // システムプロンプトがない場合は追加
     const systemLine =
       "Please follow the instructions below to change the image:";
     if (!finalPrompt.includes(systemLine)) {
-      finalPrompt = `${systemLine}\n\n${finalPrompt}`;
+      finalPrompt = `${systemLine}\n\n${finalPrompt}${negativePromptFormatted}`;
+    } else {
+      // システムプロンプトが既にある場合は、ネガティブプロンプトだけ追加
+      finalPrompt = `${finalPrompt}${negativePromptFormatted}`;
     }
 
     // サイズが含まれていない場合は追加
@@ -214,12 +226,14 @@ function App() {
           timestamp: new Date().toISOString(),
           imageGenerated: false,
           prompt: finalPrompt,
+          negativePrompt: negativePrompt,
           size: selectedSize,
           retryCount: retryCount,
           maxRetries: maxRetries,
           requestData: JSON.stringify(
             {
               prompt: finalPrompt,
+              negativePrompt: negativePrompt,
               size: selectedSize,
               imageCount: images.length,
               imageNames: images.map((img) => img.filename),
@@ -372,12 +386,14 @@ function App() {
           timestamp: new Date().toISOString(),
           imageGenerated: true,
           prompt: finalPrompt,
+          negativePrompt: negativePrompt,
           size: selectedSize,
           description: imageDescription,
           rawResponse: JSON.stringify(response, null, 2),
           requestData: JSON.stringify(
             {
               prompt: finalPrompt,
+              negativePrompt: negativePrompt,
               size: selectedSize,
               imageCount: images.length,
               imageNames: images.map((img) => img.filename),
@@ -397,10 +413,12 @@ function App() {
           imageGenerated: false,
           error: errorMessage,
           prompt: finalPrompt,
+          negativePrompt: negativePrompt,
           size: selectedSize,
           requestData: JSON.stringify(
             {
               prompt: finalPrompt,
+              negativePrompt: negativePrompt,
               size: selectedSize,
               imageCount: images.length,
               imageNames: images.map((img) => img.filename),
@@ -506,6 +524,26 @@ function App() {
                     <TipTapEditor
                       value={prompt}
                       onChange={setPrompt}
+                      images={images.map((img) => ({
+                        id: img.id,
+                        filename: img.filename,
+                      }))}
+                      selectedSize={selectedSize}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      className="text-lg font-semibold"
+                      htmlFor="negativePrompt"
+                    >
+                      <BanIcon className="inline-block mr-2 h-5 w-5" />
+                      ネガティブプロンプト
+                    </Label>
+                    <TipTapEditor
+                      value={negativePrompt}
+                      onChange={setNegativePrompt}
+                      placeholder="生成したくない要素を入力してください"
                       images={images.map((img) => ({
                         id: img.id,
                         filename: img.filename,
