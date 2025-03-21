@@ -128,8 +128,8 @@ function App() {
   };
 
   const generateImages = async () => {
-    if (images.length === 0 || !apiKey) {
-      const errorMessage = "画像とAPIキーの両方が必要です";
+    if (!apiKey) {
+      const errorMessage = "APIキーが必要です";
       setError(errorMessage);
       setResponseLog({
         status: "error",
@@ -191,15 +191,22 @@ function App() {
 
     const attemptGeneration = async () => {
       try {
-        const contents = [
-          { text: finalPrompt },
-          ...images.map((image) => ({
-            inlineData: {
-              mimeType: "image/png",
-              data: image.originalImage.split(",")[1],
-            },
-          })),
-        ];
+        // プロンプトとオプションで画像の配列を作成
+        const contents: Array<
+          { text: string } | { inlineData: { mimeType: string; data: string } }
+        > = [{ text: finalPrompt }];
+
+        // 画像がある場合は追加
+        if (images.length > 0) {
+          images.forEach((image) => {
+            contents.push({
+              inlineData: {
+                mimeType: "image/png",
+                data: image.originalImage.split(",")[1],
+              },
+            });
+          });
+        }
 
         // ログに記録
         setResponseLog({
@@ -445,7 +452,7 @@ function App() {
               Gemini画像ジェネレーター
             </CardTitle>
             <CardDescription className="text-center">
-              複数画像を追加して、AIで新しい画像を生成
+              画像とプロンプトでAIが新しい画像を生成します
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -510,7 +517,7 @@ function App() {
                   <div className="text-center">
                     <Button
                       onClick={generateImages}
-                      disabled={images.length === 0 || !apiKey || isLoading}
+                      disabled={!apiKey || isLoading}
                       size="lg"
                       className="w-full"
                     >
