@@ -225,21 +225,101 @@ function App() {
         const genAI = new GoogleGenerativeAI(apiKey);
 
         const schema = {
-          description: "画像生成レスポンス",
+          description: "Image Generation Response",
           type: SchemaType.OBJECT,
           properties: {
-            generatedImage: {
-              type: SchemaType.STRING,
-              description: "生成された画像データ（Base64形式）",
-              nullable: false,
+            candidates: {
+              type: SchemaType.ARRAY,
+              description: "List of generation candidates",
+              items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  content: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                      parts: {
+                        type: SchemaType.ARRAY,
+                        items: {
+                          type: SchemaType.OBJECT,
+                          properties: {
+                            inlineData: {
+                              type: SchemaType.OBJECT,
+                              properties: {
+                                mimeType: {
+                                  type: SchemaType.STRING,
+                                  description: "MIME type of the image",
+                                },
+                                data: {
+                                  type: SchemaType.STRING,
+                                  description: "Base64 encoded image data",
+                                },
+                              },
+                              required: ["mimeType", "data"],
+                            },
+                            text: {
+                              type: SchemaType.STRING,
+                              description:
+                                "Description text for the generated image",
+                            },
+                          },
+                        },
+                      },
+                      role: {
+                        type: SchemaType.STRING,
+                        description: "Role of the response",
+                      },
+                    },
+                    required: ["parts"],
+                  },
+                  finishReason: {
+                    type: SchemaType.STRING,
+                    description: "Reason for finishing generation",
+                  },
+                  index: {
+                    type: SchemaType.INTEGER,
+                    description: "Index of the candidate",
+                  },
+                },
+                required: ["content"],
+              },
             },
-            description: {
+            usageMetadata: {
+              type: SchemaType.OBJECT,
+              description: "Metadata about token usage",
+              properties: {
+                promptTokenCount: {
+                  type: SchemaType.INTEGER,
+                  description: "Number of tokens in the prompt",
+                },
+                totalTokenCount: {
+                  type: SchemaType.INTEGER,
+                  description: "Total number of tokens used",
+                },
+                promptTokensDetails: {
+                  type: SchemaType.ARRAY,
+                  description: "Details about token usage by modality",
+                  items: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                      modality: {
+                        type: SchemaType.STRING,
+                        description: "Modality type (TEXT, IMAGE, etc.)",
+                      },
+                      tokenCount: {
+                        type: SchemaType.INTEGER,
+                        description: "Number of tokens for this modality",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            modelVersion: {
               type: SchemaType.STRING,
-              description: "生成された画像の説明",
-              nullable: true,
+              description: "Version of the model used",
             },
           },
-          required: ["generatedImage"],
+          required: ["candidates"],
         };
 
         const model = genAI.getGenerativeModel({
@@ -262,17 +342,10 @@ function App() {
               const generatedImageData = `data:image/png;base64,${part.inlineData.data}`;
               setGeneratedImage(generatedImageData);
               imageGenerated = true;
+            } else if (part.text) {
+              // テキスト部分があれば説明として使用
+              imageDescription = part.text;
             }
-          }
-
-          // スキーマに基づいたレスポンスからdescriptionを取得
-          try {
-            const jsonResponse = JSON.parse(response.text());
-            if (jsonResponse && jsonResponse.description) {
-              imageDescription = jsonResponse.description;
-            }
-          } catch (e) {
-            console.error("Failed to parse description from response:", e);
           }
         }
 
