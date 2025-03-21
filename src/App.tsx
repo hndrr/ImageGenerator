@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Image as ImageIcon, Loader2 } from "lucide-react";
+import { ImageIcon, Loader2, LayoutIcon } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { GenerateContentRequest } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
@@ -292,9 +292,10 @@ function App() {
     };
 
     setImages((prev) => [...prev, newImage]);
-    setGeneratedImage(null);
-    setResponseLog(null);
-    setError(null);
+    // 生成された画像と関連データを消去しない
+    // setGeneratedImage(null);
+    // setResponseLog(null);
+    // setError(null);
   };
 
   return (
@@ -343,7 +344,10 @@ function App() {
                   />
 
                   <div className="space-y-2">
-                    <Label className="text-lg font-semibold">出力サイズ</Label>
+                    <Label className="text-lg font-semibold">
+                      <LayoutIcon className="inline-block mr-2 h-5 w-5" />
+                      出力サイズ
+                    </Label>
                     <SizeSelector
                       value={selectedSize}
                       onChange={setSelectedSize}
