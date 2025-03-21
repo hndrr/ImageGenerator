@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { ImageIcon, Loader2, LayoutIcon, BanIcon } from "lucide-react";
+import {
+  ImageIcon,
+  Loader2,
+  LayoutIcon,
+  BanIcon,
+  TextIcon,
+} from "lucide-react";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { GenerateContentRequest } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
@@ -18,6 +24,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface ImageItem {
   id: string;
@@ -519,6 +531,7 @@ function App() {
 
                   <div className="space-y-2">
                     <Label className="text-lg font-semibold" htmlFor="prompt">
+                      <TextIcon className="inline-block mr-2 h-5 w-5" />
                       プロンプト
                     </Label>
                     <TipTapEditor
@@ -532,25 +545,33 @@ function App() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      className="text-lg font-semibold"
-                      htmlFor="negativePrompt"
+                  <Accordion type="single" collapsible className="mt-4">
+                    <AccordionItem
+                      value="negative-prompt"
+                      className="border-b-0"
                     >
-                      <BanIcon className="inline-block mr-2 h-5 w-5" />
-                      ネガティブプロンプト
-                    </Label>
-                    <TipTapEditor
-                      value={negativePrompt}
-                      onChange={setNegativePrompt}
-                      placeholder="生成したくない要素を入力してください"
-                      images={images.map((img) => ({
-                        id: img.id,
-                        filename: img.filename,
-                      }))}
-                      selectedSize={selectedSize}
-                    />
-                  </div>
+                      <AccordionTrigger className="py-2 px-0">
+                        <div className="flex items-center">
+                          <BanIcon className="mr-2 h-5 w-5" />
+                          <span className="text-lg font-semibold">
+                            ネガティブプロンプト
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <TipTapEditor
+                          value={negativePrompt}
+                          onChange={setNegativePrompt}
+                          placeholder="生成したくない要素を入力してください"
+                          images={images.map((img) => ({
+                            id: img.id,
+                            filename: img.filename,
+                          }))}
+                          selectedSize={selectedSize}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
 
                   <div className="text-center">
                     <Button
