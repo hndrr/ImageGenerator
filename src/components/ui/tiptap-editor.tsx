@@ -126,11 +126,14 @@ interface TipTapEditorProps {
   placeholder?: string;
   className?: string;
   images?: Array<{ id: string; filename: string }>;
-  selectedSize?: string;
+  isNegativePrompt?: boolean;
 }
 
 const systemPrompt =
   "Please follow the instructions below to change the image:";
+
+const negativeSystemPrompt =
+  "Do not include the following elements in the generated image:";
 
 export function TipTapEditor({
   value,
@@ -138,6 +141,7 @@ export function TipTapEditor({
   placeholder = "画像生成の指示を入力してください",
   className,
   images = [],
+  isNegativePrompt = false,
 }: TipTapEditorProps) {
   // HTMLコンテンツを処理するユーティリティ関数
   const processContent = (html: string) => {
@@ -168,6 +172,12 @@ export function TipTapEditor({
     if (!content) {
       return "";
     }
+
+    // ネガティブプロンプトの場合は専用のシステムプロンプトを付ける
+    if (isNegativePrompt) {
+      return `${negativeSystemPrompt}\n\n${content}`;
+    }
+
     return `${systemPrompt}\n\n${content}`;
   };
 

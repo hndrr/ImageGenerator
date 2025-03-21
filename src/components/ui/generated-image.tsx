@@ -185,7 +185,10 @@ export function GeneratedImage({
                         プロンプト:
                       </div>
                       <div className="bg-secondary/50 rounded-md p-2 whitespace-pre-wrap">
-                        {responseLog.prompt}
+                        {responseLog.prompt.replace(
+                          /\n\n\[NEGATIVE PROMPT\].*$|\n\nAvoid including these elements:.+$|\n\nDo not include:.+$/,
+                          ""
+                        )}
                       </div>
                     </div>
                   )}
@@ -194,10 +197,13 @@ export function GeneratedImage({
                     responseLog.negativePrompt.trim() !== "" && (
                       <div>
                         <div className="text-muted-foreground mb-1">
-                          ネガティブプロンプト:
+                          <strong>ネガティブプロンプト:</strong>
                         </div>
-                        <div className="bg-secondary/50 rounded-md p-2 whitespace-pre-wrap">
-                          {responseLog.negativePrompt}
+                        <div className="bg-destructive/10 text-destructive-foreground rounded-md p-2 whitespace-pre-wrap border border-destructive/20">
+                          {responseLog.negativePrompt.replace(
+                            /^Do not include the following elements in the generated image:\n\n/,
+                            ""
+                          )}
                         </div>
                       </div>
                     )}

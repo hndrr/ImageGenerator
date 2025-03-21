@@ -176,20 +176,11 @@ function App() {
     // サイズを含むプロンプトを作成
     let finalPrompt = prompt;
 
-    // ネガティブプロンプトがある場合は追加
-    const negativePromptFormatted =
-      negativePrompt.trim() !== ""
-        ? `\n\nDo not include: ${negativePrompt}`
-        : "";
-
     // システムプロンプトがない場合は追加
     const systemLine =
       "Please follow the instructions below to change the image:";
     if (!finalPrompt.includes(systemLine)) {
-      finalPrompt = `${systemLine}\n\n${finalPrompt}${negativePromptFormatted}`;
-    } else {
-      // システムプロンプトが既にある場合は、ネガティブプロンプトだけ追加
-      finalPrompt = `${finalPrompt}${negativePromptFormatted}`;
+      finalPrompt = `${systemLine}\n\n${finalPrompt}`;
     }
 
     // サイズが含まれていない場合は追加
@@ -219,6 +210,12 @@ function App() {
         const contents: Array<
           { text: string } | { inlineData: { mimeType: string; data: string } }
         > = [{ text: finalPrompt }];
+
+        // ネガティブプロンプトがある場合は指示文を追加
+        if (negativePrompt && negativePrompt.trim() !== "") {
+          const textContent = contents[0] as { text: string };
+          textContent.text += `\n\n[NEGATIVE PROMPT] ${negativePrompt}`;
+        }
 
         // 画像がある場合は追加
         if (images.length > 0) {
@@ -541,7 +538,6 @@ function App() {
                         id: img.id,
                         filename: img.filename,
                       }))}
-                      selectedSize={selectedSize}
                     />
                   </div>
 
@@ -567,7 +563,7 @@ function App() {
                             id: img.id,
                             filename: img.filename,
                           }))}
-                          selectedSize={selectedSize}
+                          isNegativePrompt={true}
                         />
                       </AccordionContent>
                     </AccordionItem>
