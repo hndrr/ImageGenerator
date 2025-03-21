@@ -38,6 +38,8 @@ interface ResponseLog {
   rawResponse?: string;
   requestData?: string;
   description?: string | null;
+  retryCount?: number;
+  maxRetries?: number;
 }
 
 function App() {
@@ -149,6 +151,7 @@ function App() {
 
     if (!prompt || prompt.trim() === "") {
       setError("プロンプトが必要です");
+      setIsLoading(false);
       return;
     }
 
@@ -183,143 +186,157 @@ function App() {
     // 最終的なプロンプトを確認
     console.log("Final prompt:", finalPrompt);
 
-    try {
-      const contents = [
-        { text: finalPrompt },
-        ...images.map((image) => ({
-          inlineData: {
-            mimeType: "image/png",
-            data: image.originalImage.split(",")[1],
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    const attemptGeneration = async () => {
+      try {
+        const contents = [
+          { text: finalPrompt },
+          ...images.map((image) => ({
+            inlineData: {
+              mimeType: "image/png",
+              data: image.originalImage.split(",")[1],
+            },
+          })),
+        ];
+
+        // ログに記録
+        setResponseLog({
+          status: "generating",
+          timestamp: new Date().toISOString(),
+          imageGenerated: false,
+          prompt: finalPrompt,
+          size: selectedSize,
+          retryCount: retryCount,
+          maxRetries: maxRetries,
+          requestData: JSON.stringify(
+            {
+              prompt: finalPrompt,
+              size: selectedSize,
+              imageCount: images.length,
+              imageNames: images.map((img) => img.filename),
+            },
+            null,
+            2
+          ),
+        });
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+
+        const schema = {
+          description: "画像生成レスポンス",
+          type: SchemaType.OBJECT,
+          properties: {
+            generatedImage: {
+              type: SchemaType.STRING,
+              description: "生成された画像データ（Base64形式）",
+              nullable: false,
+            },
+            description: {
+              type: SchemaType.STRING,
+              description: "生成された画像の説明",
+              nullable: true,
+            },
           },
-        })),
-      ];
+          required: ["generatedImage"],
+        };
 
-      // ログに記録
-      setResponseLog({
-        status: "generating",
-        timestamp: new Date().toISOString(),
-        imageGenerated: false,
-        prompt: finalPrompt,
-        size: selectedSize,
-        requestData: JSON.stringify(
-          {
-            prompt: finalPrompt,
-            size: selectedSize,
-            imageCount: images.length,
-            imageNames: images.map((img) => img.filename),
-          },
-          null,
-          2
-        ),
-      });
+        const model = genAI.getGenerativeModel({
+          model: "gemini-2.0-flash-exp-image-generation",
+          generationConfig: {
+            responseModalities: ["Text", "Image"],
+            responseSchema: schema,
+          } as GenerateContentRequest["generationConfig"],
+        });
 
-      const genAI = new GoogleGenerativeAI(apiKey);
+        const result = await model.generateContent(contents);
+        const response = await result.response;
+        console.log("Raw response:", response);
 
-      const schema = {
-        description: "画像生成レスポンス",
-        type: SchemaType.OBJECT,
-        properties: {
-          generatedImage: {
-            type: SchemaType.STRING,
-            description: "生成された画像データ（Base64形式）",
-            nullable: false,
-          },
-          description: {
-            type: SchemaType.STRING,
-            description: "生成された画像の説明",
-            nullable: true,
-          },
-        },
-        required: ["generatedImage"],
-      };
+        let imageGenerated = false;
+        let imageDescription = null;
+        if (response?.candidates?.[0]?.content?.parts) {
+          for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData?.data) {
+              const generatedImageData = `data:image/png;base64,${part.inlineData.data}`;
+              setGeneratedImage(generatedImageData);
+              imageGenerated = true;
+            }
+          }
 
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash-exp-image-generation",
-        generationConfig: {
-          responseModalities: ["Text", "Image"],
-          responseSchema: schema,
-        } as GenerateContentRequest["generationConfig"],
-      });
-
-      const result = await model.generateContent(contents);
-      const response = await result.response;
-      console.log("Raw response:", response);
-
-      let imageGenerated = false;
-      let imageDescription = null;
-      if (response?.candidates?.[0]?.content?.parts) {
-        for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData?.data) {
-            const generatedImageData = `data:image/png;base64,${part.inlineData.data}`;
-            setGeneratedImage(generatedImageData);
-            imageGenerated = true;
+          // スキーマに基づいたレスポンスからdescriptionを取得
+          try {
+            const jsonResponse = JSON.parse(response.text());
+            if (jsonResponse && jsonResponse.description) {
+              imageDescription = jsonResponse.description;
+            }
+          } catch (e) {
+            console.error("Failed to parse description from response:", e);
           }
         }
 
-        // スキーマに基づいたレスポンスからdescriptionを取得
-        try {
-          const jsonResponse = JSON.parse(response.text());
-          if (jsonResponse && jsonResponse.description) {
-            imageDescription = jsonResponse.description;
+        if (!imageGenerated) {
+          retryCount++;
+          if (retryCount < maxRetries) {
+            console.log(`画像生成失敗。リトライ ${retryCount}/${maxRetries}`);
+            return await attemptGeneration();
           }
-        } catch (e) {
-          console.error("Failed to parse description from response:", e);
+          throw new Error(
+            `画像データが返ってきませんでした。\n\n${maxRetries}回試しましたが失敗しました。\n画像もしくはプロンプトの変更を試してください。`
+          );
         }
+
+        setResponseLog({
+          status: "success",
+          timestamp: new Date().toISOString(),
+          imageGenerated: true,
+          prompt: finalPrompt,
+          size: selectedSize,
+          description: imageDescription,
+          rawResponse: JSON.stringify(response, null, 2),
+          requestData: JSON.stringify(
+            {
+              prompt: finalPrompt,
+              size: selectedSize,
+              imageCount: images.length,
+              imageNames: images.map((img) => img.filename),
+            },
+            null,
+            2
+          ),
+        });
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "画像の生成に失敗しました";
+
+        setError(errorMessage);
+        setResponseLog({
+          status: "error",
+          timestamp: new Date().toISOString(),
+          imageGenerated: false,
+          error: errorMessage,
+          prompt: finalPrompt,
+          size: selectedSize,
+          requestData: JSON.stringify(
+            {
+              prompt: finalPrompt,
+              size: selectedSize,
+              imageCount: images.length,
+              imageNames: images.map((img) => img.filename),
+            },
+            null,
+            2
+          ),
+        });
+
+        console.error("エラー:", err);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      if (!imageGenerated) {
-        throw new Error(
-          `画像データが返ってきませんでした。\n\n複数回試しても結果が返ってこない場合は、\n画像もしくはプロンプトの変更を試してください。`
-        );
-      }
-
-      setResponseLog({
-        status: "success",
-        timestamp: new Date().toISOString(),
-        imageGenerated: true,
-        prompt: finalPrompt,
-        size: selectedSize,
-        description: imageDescription,
-        rawResponse: JSON.stringify(response, null, 2),
-        requestData: JSON.stringify(
-          {
-            prompt: finalPrompt,
-            size: selectedSize,
-            imageCount: images.length,
-            imageNames: images.map((img) => img.filename),
-          },
-          null,
-          2
-        ),
-      });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "画像の生成に失敗しました";
-
-      setError(errorMessage);
-      setResponseLog({
-        status: "error",
-        timestamp: new Date().toISOString(),
-        imageGenerated: false,
-        error: errorMessage,
-        prompt: finalPrompt,
-        size: selectedSize,
-        requestData: JSON.stringify(
-          {
-            prompt: finalPrompt,
-            size: selectedSize,
-            imageCount: images.length,
-            imageNames: images.map((img) => img.filename),
-          },
-          null,
-          2
-        ),
-      });
-
-      console.error("エラー:", err);
-    } finally {
-      setIsLoading(false);
-    }
+    await attemptGeneration();
   };
 
   const removeImage = (id: string) => {
