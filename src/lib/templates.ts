@@ -16,6 +16,20 @@ export const aspectRatioTemplates = [
   },
 ];
 
+export const expressionTemplates = [
+  { label: "笑顔", text: "expression:smiling" },
+  { label: "真顔", text: "expression:neutral face" },
+  { label: "悲しい", text: "expression:sad face" },
+  { label: "怒り", text: "expression:angry face" },
+  { label: "驚き", text: "expression:surprised face" },
+  { label: "ウインク", text: "expression:winking" },
+  { label: "照れ", text: "expression:embarrassed" },
+  { label: "泣き顔", text: "expression:crying" },
+  { label: "大笑い", text: "expression:laughing hard" },
+  { label: "困り顔", text: "expression:troubled face" },
+  { label: "眠そう", text: "expression:sleepy face" },
+];
+
 export const angleTemplates = [
   { label: "正面", text: "view:front view" },
   { label: "俯瞰", text: "view:bird's eye view" },
@@ -23,6 +37,8 @@ export const angleTemplates = [
   { label: "斜め", text: "view:45 degree angle" },
   { label: "クローズアップ", text: "view:close-up shot" },
   { label: "引き", text: "view:full body shot" },
+  { label: "バックショット", text: "view:back view" },
+  { label: "自撮り", text: "view:selfie" },
 ];
 
 export const poseTemplates = [
@@ -142,4 +158,62 @@ export const clothingTemplates = [
   { label: "ゴシック", text: "clothing:gothic style" },
   { label: "ストリート", text: "clothing:street fashion" },
   { label: "ヴィンテージ", text: "clothing:vintage fashion" },
+];
+
+export const ageTemplates = [
+  { label: "子供", text: "age:child" },
+  { label: "10代", text: "age:teenager" },
+  { label: "20代", text: "age:twenties" },
+  { label: "30代", text: "age:thirties" },
+  { label: "40代", text: "age:forties" },
+  { label: "50代", text: "age:fifties" },
+  { label: "高齢者", text: "age:elderly" },
+];
+
+export const hairstyleTemplates = [
+  { label: "ロングヘア", text: "hairstyle:long hair" },
+  { label: "ショートヘア", text: "hairstyle:short hair" },
+  { label: "ボブ", text: "hairstyle:bob cut" },
+  { label: "ポニーテール", text: "hairstyle:ponytail" },
+  { label: "ツインテール", text: "hairstyle:twin tails" },
+  { label: "お団子ヘア", text: "hairstyle:bun hair" },
+  { label: "アップヘア", text: "hairstyle:updo" },
+  { label: "パーマ", text: "hairstyle:curly hair" },
+  { label: "ストレート", text: "hairstyle:straight hair" },
+  { label: "サイドテール", text: "hairstyle:side ponytail" },
+  { label: "前髪あり", text: "hairstyle:with bangs" },
+  { label: "前髪なし", text: "hairstyle:without bangs" },
+  { label: "三つ編み", text: "hairstyle:braided hair" },
+];
+
+export const haircolorTemplates = [
+  { label: "黒髪", text: "hair color:black hair" },
+  { label: "茶髪", text: "hair color:brown hair" },
+  { label: "金髪", text: "hair color:blonde hair" },
+  { label: "赤髪", text: "hair color:red hair" },
+  { label: "ピンク髪", text: "hair color:pink hair" },
+  { label: "青髪", text: "hair color:blue hair" },
+  { label: "緑髪", text: "hair color:green hair" },
+  { label: "紫髪", text: "hair color:purple hair" },
+  { label: "白髪", text: "hair color:white hair" },
+  { label: "銀髪", text: "hair color:silver hair" },
+  { label: "グラデーション", text: "hair color:gradient hair" },
+  { label: "ハイライト", text: "hair color:highlighted hair" },
+];
+
+export const lightingTemplates = [
+  { label: "自然光", text: "lighting:natural light" },
+  { label: "日光", text: "lighting:sunlight" },
+  { label: "夕日", text: "lighting:sunset lighting" },
+  { label: "朝日", text: "lighting:sunrise lighting" },
+  { label: "月明かり", text: "lighting:moonlight" },
+  { label: "キャンドル", text: "lighting:candlelight" },
+  { label: "スポットライト", text: "lighting:spotlight" },
+  { label: "間接照明", text: "lighting:ambient light" },
+  { label: "ネオンライト", text: "lighting:neon lights" },
+  { label: "バックライト", text: "lighting:backlight" },
+  { label: "レムブラント", text: "lighting:rembrandt lighting" },
+  { label: "ハイキー", text: "lighting:high-key lighting" },
+  { label: "ローキー", text: "lighting:low-key lighting" },
+  { label: "シルエット", text: "lighting:silhouette lighting" },
 ];
