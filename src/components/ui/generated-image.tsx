@@ -200,10 +200,7 @@ export function GeneratedImage({
                           <strong>ネガティブプロンプト:</strong>
                         </div>
                         <div className="bg-destructive/10 text-destructive-foreground rounded-md p-2 whitespace-pre-wrap border border-destructive/20">
-                          {responseLog.negativePrompt.replace(
-                            /^Do not include the following elements in the generated image:\n\n/,
-                            ""
-                          )}
+                          {responseLog.negativePrompt}
                         </div>
                       </div>
                     )}
