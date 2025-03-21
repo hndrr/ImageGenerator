@@ -14,6 +14,8 @@ interface ResponseLog {
   rawResponse?: string;
   requestData?: string;
   description?: string | null;
+  retryCount?: number;
+  maxRetries?: number;
 }
 
 interface GeneratedImageProps {
@@ -60,6 +62,14 @@ export function GeneratedImage({
       case "error":
         return "エラー";
       case "generating":
+        if (
+          responseLog?.retryCount !== undefined &&
+          responseLog?.maxRetries !== undefined
+        ) {
+          return `生成中... [${responseLog.retryCount + 1}/${
+            responseLog.maxRetries
+          }]`;
+        }
         return "生成中...";
       default:
         return "Unknown";
@@ -76,8 +86,16 @@ export function GeneratedImage({
           <Card className="overflow-hidden">
             <CardContent className="p-4 bg-white/10">
               {isLoading ? (
-                <div className="h-96 flex items-center justify-center bg-secondary rounded-lg">
-                  <Loader2 className="h-8 w-8 animate-spin" />
+                <div className="h-96 flex flex-col items-center justify-center bg-secondary rounded-lg">
+                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                  {responseLog?.status === "generating" &&
+                    responseLog?.retryCount !== undefined &&
+                    responseLog?.maxRetries !== undefined && (
+                      <p className="text-center text-sm text-muted-foreground">
+                        生成中... [{responseLog.retryCount + 1}/
+                        {responseLog.maxRetries}]
+                      </p>
+                    )}
                 </div>
               ) : error ? (
                 <div className="h-96 flex items-center justify-center">
