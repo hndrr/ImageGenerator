@@ -474,7 +474,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8">
+    <div className="min-h-screen bg-background text-foreground p-8 max-md:p-4">
       <div className="max-w-7xl mx-auto">
         <Card>
           <CardHeader>
