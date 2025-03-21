@@ -72,7 +72,7 @@ function TemplateButton({
         {icon}
         <span>{label}</span>
       </Button>
-      <div className="absolute top-full left-0 mt-1 max-md:w-36 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+      <div className="absolute top-full max-md:-ml-4 left-0 mt-1 max-md:w-36 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
         {templates.map((template) => (
           <button
             key={template.label}
