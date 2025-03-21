@@ -16,25 +16,25 @@ interface SizeSelectorProps {
 const sizes = [
   {
     label: "16:9",
-    value: "wide rectangular image with 16:9 aspect ratio",
+    value: "horizontal wide rectangular image with 16:9 aspect ratio",
     description: "シネマ",
     icon: RectangleHorizontalIcon,
   },
   {
     label: "9:16",
-    value: "wide rectangular image with 9:16 aspect ratio",
+    value: "vertical wide rectangular image with 9:16 aspect ratio",
     description: "スマートフォン",
     icon: RectangleVerticalIcon,
   },
   {
     label: "4:3",
-    value: "rectangular image with 4:3 aspect ratio",
+    value: "horizontal rectangular image with 4:3 aspect ratio",
     description: "スタンダード",
     icon: Tv2Icon,
   },
   {
     label: "4:5",
-    value: "rectangular image with 4:5 aspect ratio",
+    value: "vertical rectangular image with 4:5 aspect ratio",
     description: "ポートレート",
     icon: SquareUserIcon,
   },
