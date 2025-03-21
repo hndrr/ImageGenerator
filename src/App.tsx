@@ -474,7 +474,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8 max-md:p-4">
+    <div className="min-h-screen bg-background text-foreground p-8 max-md:p-4 w-full">
       <div className="max-w-7xl mx-auto">
         <Card>
           <CardHeader>
@@ -485,7 +485,7 @@ function App() {
               画像とプロンプトでAIが新しい画像を生成します
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-md:p-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left Column - Input Section */}
               <Card className="border-none shadow-none">
