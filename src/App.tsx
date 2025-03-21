@@ -546,11 +546,11 @@ function App() {
                       value="negative-prompt"
                       className="border-b-0"
                     >
-                      <AccordionTrigger className="py-2 px-0">
+                      <AccordionTrigger className="py-2 px-0 hover:no-underline">
                         <div className="flex items-center">
-                          <BanIcon className="mr-2 h-5 w-5" />
-                          <span className="text-lg font-semibold">
-                            ネガティブプロンプト
+                          <BanIcon className="mr-2 h-5 w-5 text-destructive" />
+                          <span className="text-lg font-semibold text-destructive">
+                            ネガティブプロンプト [EXPERIMENTAL]
                           </span>
                         </div>
                       </AccordionTrigger>

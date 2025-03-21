@@ -133,7 +133,7 @@ const systemPrompt =
   "Please follow the instructions below to change the image:";
 
 const negativeSystemPrompt =
-  "Do not include the following elements in the generated image:";
+  "[NEGATIVE PROMPT] Do not include the following elements in the generated image:";
 
 export function TipTapEditor({
   value,
