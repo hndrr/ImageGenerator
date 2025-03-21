@@ -13,6 +13,7 @@ interface ResponseLog {
   size?: string;
   rawResponse?: string;
   requestData?: string;
+  description?: string | null;
 }
 
 interface GeneratedImageProps {
@@ -93,6 +94,14 @@ export function GeneratedImage({
                       className="w-full rounded-lg object-contain h-96 cursor-pointer"
                     />
                   </ImageModal>
+                  {responseLog?.description && (
+                    <div className="mt-4 p-3 bg-secondary/50 rounded-lg text-sm">
+                      <p className="font-semibold mb-1">画像の説明:</p>
+                      <p className="whitespace-pre-line">
+                        {responseLog.description}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleDownload(generatedImage)}

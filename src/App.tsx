@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ImageIcon, Loader2, LayoutIcon } from "lucide-react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { GenerateContentRequest } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,7 @@ interface ResponseLog {
   size?: string;
   rawResponse?: string;
   requestData?: string;
+  description?: string | null;
 }
 
 function App() {
@@ -213,10 +214,30 @@ function App() {
       });
 
       const genAI = new GoogleGenerativeAI(apiKey);
+
+      const schema = {
+        description: "画像生成レスポンス",
+        type: SchemaType.OBJECT,
+        properties: {
+          generatedImage: {
+            type: SchemaType.STRING,
+            description: "生成された画像データ（Base64形式）",
+            nullable: false,
+          },
+          description: {
+            type: SchemaType.STRING,
+            description: "生成された画像の説明",
+            nullable: true,
+          },
+        },
+        required: ["generatedImage"],
+      };
+
       const model = genAI.getGenerativeModel({
         model: "gemini-2.0-flash-exp-image-generation",
         generationConfig: {
           responseModalities: ["Text", "Image"],
+          responseSchema: schema,
         } as GenerateContentRequest["generationConfig"],
       });
 
@@ -225,14 +246,24 @@ function App() {
       console.log("Raw response:", response);
 
       let imageGenerated = false;
+      let imageDescription = null;
       if (response?.candidates?.[0]?.content?.parts) {
         for (const part of response.candidates[0].content.parts) {
           if (part.inlineData?.data) {
             const generatedImageData = `data:image/png;base64,${part.inlineData.data}`;
             setGeneratedImage(generatedImageData);
             imageGenerated = true;
-            break;
           }
+        }
+
+        // スキーマに基づいたレスポンスからdescriptionを取得
+        try {
+          const jsonResponse = JSON.parse(response.text());
+          if (jsonResponse && jsonResponse.description) {
+            imageDescription = jsonResponse.description;
+          }
+        } catch (e) {
+          console.error("Failed to parse description from response:", e);
         }
       }
 
@@ -248,6 +279,7 @@ function App() {
         imageGenerated: true,
         prompt: finalPrompt,
         size: selectedSize,
+        description: imageDescription,
         rawResponse: JSON.stringify(response, null, 2),
         requestData: JSON.stringify(
           {
