@@ -8,7 +8,7 @@ import {
   CameraIcon as AngleIcon,
   User as PoseIcon,
   GlassesIcon,
-  PaletteIcon,
+  MountainIcon,
   BrushIcon,
   ClockIcon,
   HeartIcon,
@@ -16,6 +16,11 @@ import {
   CloudIcon,
   ApertureIcon,
   ShirtIcon,
+  SmileIcon,
+  CalendarIcon,
+  ScissorsIcon,
+  PaintbrushIcon,
+  LampIcon,
 } from "lucide-react";
 import {
   angleTemplates,
@@ -29,6 +34,11 @@ import {
   timeTemplates,
   lensTemplates,
   clothingTemplates,
+  expressionTemplates,
+  ageTemplates,
+  hairstyleTemplates,
+  haircolorTemplates,
+  lightingTemplates,
 } from "@/lib/templates";
 
 interface TipTapEditorProps {
@@ -219,6 +229,26 @@ export function TipTapEditor({
     insertTemplate(text);
   };
 
+  const insertExpressionTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertAgeTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertHairstyleTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertHaircolorTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
+  const insertLightingTemplate = (text: string) => {
+    insertTemplate(text);
+  };
+
   return (
     <div className="space-y-2 border border-border rounded-lg">
       <div className="flex items-center gap-1 rounded-t-md border-b border-border bg-transparent p-1.5 flex-wrap">
@@ -238,7 +268,7 @@ export function TipTapEditor({
                 <button
                   key={image.id}
                   onClick={() => insertImageReference(image.filename)}
-                  className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                  className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
                 >
                   {`image_${index + 1}: ${image.filename}`}
                 </button>
@@ -248,15 +278,33 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <BrushIcon className="h-4 w-4" />
-            <span>スタイル</span>
+            <CalendarIcon className="h-4 w-4" />
+            <span>年齢</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
-            {styleTemplates.map((template) => (
+            {ageTemplates.map((template) => (
               <button
                 key={template.label}
-                onClick={() => insertStyleTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                onClick={() => insertAgeTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <SmileIcon className="h-4 w-4" />
+            <span>表情</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {expressionTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertExpressionTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -274,7 +322,43 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertPoseTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <ScissorsIcon className="h-4 w-4" />
+            <span>髪型</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {hairstyleTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertHairstyleTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <PaintbrushIcon className="h-4 w-4" />
+            <span>髪色</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {haircolorTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertHaircolorTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -292,7 +376,7 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertClothingTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -310,7 +394,7 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertAccessoryTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -328,7 +412,7 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertAngleTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -346,7 +430,7 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertLensTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -356,7 +440,7 @@ export function TipTapEditor({
 
         <div className="relative group">
           <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
-            <PaletteIcon className="h-4 w-4" />
+            <MountainIcon className="h-4 w-4" />
             <span>背景</span>
           </Button>
           <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
@@ -364,7 +448,7 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertBackgroundTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -382,7 +466,7 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertTimeTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -400,7 +484,25 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertWeatherTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <LampIcon className="h-4 w-4" />
+            <span>照明</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {lightingTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertLightingTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -418,7 +520,7 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertMoodTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
@@ -436,7 +538,25 @@ export function TipTapEditor({
               <button
                 key={template.label}
                 onClick={() => insertFilterTemplate(template.text)}
-                className="w-full px-2 py-1.5 text-sm text-left hover:bg-muted truncate"
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative group">
+          <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+            <BrushIcon className="h-4 w-4" />
+            <span>スタイル</span>
+          </Button>
+          <div className="absolute top-full left-0 mt-1 w-48 py-1 bg-popover rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[300px] overflow-y-auto">
+            {styleTemplates.map((template) => (
+              <button
+                key={template.label}
+                onClick={() => insertStyleTemplate(template.text)}
+                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
               >
                 {template.label}
               </button>
