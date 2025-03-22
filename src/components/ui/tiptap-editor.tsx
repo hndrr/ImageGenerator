@@ -23,8 +23,6 @@ import {
   ScissorsIcon,
   PaintbrushIcon,
   LampIcon,
-  Plus,
-  X,
 } from "lucide-react";
 import {
   angleTemplates,
@@ -236,11 +234,85 @@ export function TipTapEditor({
 }: TipTapEditorProps) {
   // タグ関連の状態
   const [tagCategories, setTagCategories] = useState<TagCategory[]>([]);
-  const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(
-    null
-  );
-  const [newCategoryName, setNewCategoryName] = useState("");
   const [newTagName, setNewTagName] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [customCategoryName, setCustomCategoryName] = useState("");
+
+  // テンプレートからカテゴリを抽出する関数
+  const extractCategoryFromTemplates = (template: TemplateItem): string => {
+    const colonIndex = template.text.indexOf(":");
+    if (colonIndex > 0) {
+      return template.text.substring(0, colonIndex).trim();
+    }
+    return "";
+  };
+
+  // カテゴリの日本語名とカテゴリIDのマッピング
+  const categoryMapping: Record<string, string> = {
+    expression: "表情",
+    view: "アングル",
+    pose: "ポーズ",
+    accessory: "アクセサリー",
+    background: "背景",
+    "generate style": "スタイル",
+    weather: "天気",
+    mood: "ムード",
+    filter: "フィルター",
+    time: "時間",
+    lens: "レンズ",
+    clothing: "服装",
+    age: "年齢",
+    hairstyle: "髪型",
+    "hair color": "髪色",
+    lighting: "照明",
+  };
+
+  // カテゴリIDから日本語名を取得する関数
+  const getCategoryJapaneseName = (categoryId: string): string => {
+    return categoryMapping[categoryId] || categoryId;
+  };
+
+  // 日本語カテゴリ名から英語カテゴリIDを取得する関数
+  const getCategoryId = (japaneseName: string): string => {
+    for (const [id, name] of Object.entries(categoryMapping)) {
+      if (name === japaneseName) {
+        return id;
+      }
+    }
+    return japaneseName; // マッピングがない場合はそのまま返す
+  };
+
+  // 各テンプレートからカテゴリを抽出
+  const getUniqueCategories = (): { id: string; name: string }[] => {
+    const allCategories = [
+      ...expressionTemplates.map(extractCategoryFromTemplates),
+      ...angleTemplates.map(extractCategoryFromTemplates),
+      ...poseTemplates.map(extractCategoryFromTemplates),
+      ...accessoryTemplates.map(extractCategoryFromTemplates),
+      ...backgroundTemplates.map(extractCategoryFromTemplates),
+      ...styleTemplates.map(extractCategoryFromTemplates),
+      ...weatherTemplates.map(extractCategoryFromTemplates),
+      ...moodTemplates.map(extractCategoryFromTemplates),
+      ...filterTemplates.map(extractCategoryFromTemplates),
+      ...timeTemplates.map(extractCategoryFromTemplates),
+      ...lensTemplates.map(extractCategoryFromTemplates),
+      ...clothingTemplates.map(extractCategoryFromTemplates),
+      ...ageTemplates.map(extractCategoryFromTemplates),
+      ...hairstyleTemplates.map(extractCategoryFromTemplates),
+      ...haircolorTemplates.map(extractCategoryFromTemplates),
+      ...lightingTemplates.map(extractCategoryFromTemplates),
+    ].filter(Boolean);
+
+    // 重複を削除し、IDと日本語名のオブジェクトの配列を返す
+    const uniqueIds = [...new Set(allCategories)];
+    return uniqueIds.map((id) => ({
+      id,
+      name: getCategoryJapaneseName(id),
+    }));
+  };
+
+  // プリセットカテゴリのリスト
+  const presetCategories = getUniqueCategories();
 
   // タグから構造化データを生成
   useEffect(() => {
@@ -366,12 +438,12 @@ export function TipTapEditor({
     // テンプレートからタグを追加
     const colonIndex = text.indexOf(":");
     if (colonIndex > 0) {
-      const category = text.substring(0, colonIndex).trim();
+      const categoryId = text.substring(0, colonIndex).trim();
       const tag = text.substring(colonIndex + 1).trim();
 
-      // カテゴリが存在するか確認
+      // カテゴリIDでカテゴリが存在するか確認
       const categoryIndex = tagCategories.findIndex(
-        (c) => c.name.toLowerCase() === category.toLowerCase()
+        (c) => c.name.toLowerCase() === categoryId.toLowerCase()
       );
 
       if (categoryIndex === -1) {
@@ -379,7 +451,7 @@ export function TipTapEditor({
         setTagCategories([
           ...tagCategories,
           {
-            name: category,
+            name: categoryId, // 内部的には英語のカテゴリID
             tags: [tag],
             expanded: true,
           },
@@ -395,41 +467,46 @@ export function TipTapEditor({
     }
   };
 
-  // タグに関連する関数
-  const addCategory = () => {
-    if (newCategoryName.trim()) {
-      setTagCategories([
-        ...tagCategories,
-        { name: newCategoryName.trim(), tags: [], expanded: true },
-      ]);
-      setNewCategoryName("");
-    }
-  };
+  const addTag = (categoryName: string) => {
+    if (!newTagName.trim()) return;
 
-  const removeCategory = (index: number) => {
+    // カテゴリIDを取得（日本語カテゴリ名から英語のカテゴリIDに変換）
+    const categoryId = getCategoryId(categoryName);
+
+    // カテゴリが存在するか確認
+    const categoryIndex = tagCategories.findIndex(
+      (c) => c.name.toLowerCase() === categoryId.toLowerCase()
+    );
+
     const newCategories = [...tagCategories];
-    newCategories.splice(index, 1);
-    setTagCategories(newCategories);
-  };
 
-  const addTag = (categoryIndex: number) => {
-    if (newTagName.trim()) {
-      const newCategories = [...tagCategories];
-      newCategories[categoryIndex].tags.push(newTagName.trim());
-      setTagCategories(newCategories);
-      setNewTagName("");
+    if (categoryIndex === -1) {
+      // カテゴリが存在しない場合は作成
+      newCategories.push({
+        name: categoryId, // 内部的には英語のカテゴリID
+        tags: [newTagName.trim()],
+        expanded: true,
+      });
+    } else {
+      // カテゴリが存在する場合はタグを追加
+      if (!newCategories[categoryIndex].tags.includes(newTagName.trim())) {
+        newCategories[categoryIndex].tags.push(newTagName.trim());
+      }
     }
+
+    setTagCategories(newCategories);
+    setNewTagName("");
   };
 
   const removeTag = (categoryIndex: number, tagIndex: number) => {
     const newCategories = [...tagCategories];
     newCategories[categoryIndex].tags.splice(tagIndex, 1);
-    setTagCategories(newCategories);
-  };
 
-  const toggleCategoryExpand = (index: number) => {
-    const newCategories = [...tagCategories];
-    newCategories[index].expanded = !newCategories[index].expanded;
+    // タグが空になった場合はカテゴリも削除
+    if (newCategories[categoryIndex].tags.length === 0) {
+      newCategories.splice(categoryIndex, 1);
+    }
+
     setTagCategories(newCategories);
   };
 
@@ -440,31 +517,41 @@ export function TipTapEditor({
   return (
     <div className={cn("space-y-2 border border-border rounded-lg", className)}>
       <div className="p-4">
-        <div className="space-y-2">
-          {tagCategories.map((category, catIndex) => (
-            <div key={catIndex} className="mb-2">
-              <h3 className="text-sm font-medium mb-1">{category.name}</h3>
-              <div className="flex flex-wrap gap-1">
-                {category.tags.map((tag, tagIndex) => (
-                  <Tag
-                    key={tagIndex}
-                    variant={getTagVariant(category.name)}
-                    onRemove={() => removeTag(catIndex, tagIndex)}
-                  >
-                    {tag}
-                  </Tag>
-                ))}
-              </div>
+        <div className="space-y-4">
+          {/* タグの表示エリア */}
+          {tagCategories.length > 0 && (
+            <div className="space-y-3">
+              {tagCategories.map((category, catIndex) => (
+                <div key={catIndex} className="mb-2">
+                  <h3 className="text-sm font-medium mb-1 text-foreground/80">
+                    {getCategoryJapaneseName(category.name)}
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    {category.tags.map((tag, tagIndex) => (
+                      <Tag
+                        key={tagIndex}
+                        variant={getTagVariant(category.name)}
+                        onRemove={() => removeTag(catIndex, tagIndex)}
+                      >
+                        {tag}
+                      </Tag>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* タグが無い場合のプレースホルダー */}
           {tagCategories.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              下のボタンを使ってタグを追加してください
+            <p className="text-sm text-muted-foreground text-center py-4">
+              下のボタンからタグを追加してください
             </p>
           )}
         </div>
       </div>
 
+      {/* タグ選択ボタン */}
       <div className="px-2 flex flex-wrap gap-2 border-t pt-2 pb-1 bg-muted/20">
         <TemplateButton
           icon={<SmileIcon className="h-4 w-4" />}
@@ -596,87 +683,114 @@ export function TipTapEditor({
         )}
       </div>
 
-      <div className="px-4 py-3 border-t space-y-4">
-        <div className="flex flex-wrap gap-2">
-          {tagCategories.map((category, catIndex) => (
-            <div
-              key={catIndex}
-              className="border rounded-md overflow-hidden w-full md:w-[calc(50%-0.5rem)]"
-            >
-              <div className="bg-muted/20 px-3 py-2 flex items-center justify-between">
-                <h3 className="font-medium text-sm">{category.name}</h3>
-                <div className="flex space-x-1">
+      {/* シンプルなカスタムタグ入力 */}
+      <div className="px-4 py-3 border-t">
+        <div className="flex flex-col space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-sm font-medium">カテゴリ</label>
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 px-3 py-2 border rounded-md text-sm bg-background"
+                  value={activeCategory || ""}
+                  onChange={(e) => {
+                    setActiveCategory(e.target.value);
+                    if (e.target.value === "custom") {
+                      setCustomCategoryName("");
+                    }
+                  }}
+                >
+                  <option value="" disabled>
+                    カテゴリを選択...
+                  </option>
+                  <optgroup label="プリセット">
+                    {presetCategories.map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {tagCategories.length > 0 && (
+                    <optgroup label="既存のカテゴリ">
+                      {tagCategories.map((cat) => (
+                        <option
+                          key={cat.name}
+                          value={getCategoryJapaneseName(cat.name)}
+                        >
+                          {getCategoryJapaneseName(cat.name)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="その他">
+                    <option value="custom">新しいカテゴリを作成...</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            {activeCategory === "custom" ? (
+              <div className="flex flex-col space-y-1.5">
+                <label className="text-sm font-medium">新しいカテゴリ名</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="カテゴリ名を入力..."
+                    className="flex-1 px-3 py-2 border rounded-md text-sm bg-background"
+                    value={customCategoryName}
+                    onChange={(e) => setCustomCategoryName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && customCategoryName.trim()) {
+                        setActiveCategory(customCategoryName.trim());
+                        setCustomCategoryName("");
+                      }
+                    }}
+                  />
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => toggleCategoryExpand(catIndex)}
+                    onClick={() => {
+                      if (customCategoryName.trim()) {
+                        setActiveCategory(customCategoryName.trim());
+                        setCustomCategoryName("");
+                      }
+                    }}
+                    disabled={!customCategoryName.trim()}
+                    className="whitespace-nowrap"
                   >
-                    {category.expanded ? "-" : "+"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-destructive"
-                    onClick={() => removeCategory(catIndex)}
-                  >
-                    <X className="h-3 w-3" />
+                    確定
                   </Button>
                 </div>
               </div>
-
-              {category.expanded && (
-                <div className="p-2">
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {category.tags.map((tag, tagIndex) => (
-                      <Tag
-                        key={tagIndex}
-                        variant={getTagVariant(category.name)}
-                        onRemove={() => removeTag(catIndex, tagIndex)}
-                      >
-                        {tag}
-                      </Tag>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-2 mt-2">
-                    <input
-                      type="text"
-                      value={activeCategoryIndex === catIndex ? newTagName : ""}
-                      onChange={(e) => setNewTagName(e.target.value)}
-                      onFocus={() => setActiveCategoryIndex(catIndex)}
-                      placeholder="新しいタグ..."
-                      className="flex-1 text-sm px-2 py-1 border rounded"
-                    />
-                    <Button
-                      size="sm"
-                      className="h-7"
-                      onClick={() => addTag(catIndex)}
-                      disabled={
-                        activeCategoryIndex !== catIndex || !newTagName.trim()
+            ) : activeCategory ? (
+              <div className="flex flex-col space-y-1.5">
+                <label className="text-sm font-medium">タグ</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="新しいタグを入力..."
+                    className="flex-1 px-3 py-2 border rounded-md text-sm bg-background"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Enter" &&
+                        newTagName.trim() &&
+                        activeCategory
+                      ) {
+                        addTag(activeCategory);
                       }
-                    >
-                      追加
-                    </Button>
-                  </div>
+                    }}
+                  />
+                  <Button
+                    onClick={() => addTag(activeCategory)}
+                    disabled={!newTagName.trim()}
+                    className="whitespace-nowrap"
+                  >
+                    追加
+                  </Button>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="新しいカテゴリ..."
-            className="flex-1 px-3 py-1.5 border rounded-md"
-          />
-          <Button onClick={addCategory} disabled={!newCategoryName.trim()}>
-            <Plus className="h-4 w-4 mr-1" />
-            カテゴリ追加
-          </Button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
