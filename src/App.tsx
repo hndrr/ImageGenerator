@@ -19,7 +19,7 @@ import {
   PromptData,
 } from "@/components/ui/tiptap-editor";
 import { SizeSelector } from "@/components/ui/size-selector";
-import { promptToText, textToPrompt } from "@/lib/prompt-utils";
+import { textToPrompt } from "@/lib/prompt-utils";
 import { saveEncryptedApiKey, getDecryptedApiKey } from "@/lib/crypto";
 import { logEvent } from "@/lib/analytics";
 import {
@@ -66,12 +66,6 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string>("");
   const [negativePrompt, setNegativePrompt] = useState<string>("");
-  const [promptData, setPromptData] = useState<PromptData>({
-    positive: {},
-    negative: {},
-  });
-  const [useStructuredPrompt, setUseStructuredPrompt] =
-    useState<boolean>(false);
   const [apiKey, setApiKey] = useState<string>("");
   const [shouldSaveApiKey, setShouldSaveApiKey] = useState<boolean>(false);
   const [responseLog, setResponseLog] = useState<ResponseLog | null>(null);
@@ -107,23 +101,6 @@ function App() {
       localStorage.removeItem("encryptedApiKey");
     }
   }, [apiKey, isApiKeyFromEnv, shouldSaveApiKey]);
-
-  // プロンプトオブジェクトが変更されたときにテキストプロンプトを更新
-  useEffect(() => {
-    if (useStructuredPrompt) {
-      const { positivePrompt, negativePrompt: negPrompt } =
-        promptToText(promptData);
-      setPrompt(positivePrompt);
-      setNegativePrompt(negPrompt);
-    }
-  }, [promptData, useStructuredPrompt]);
-
-  // テキストプロンプトが変更されたときにプロンプトオブジェクトを更新
-  useEffect(() => {
-    if (!useStructuredPrompt) {
-      setPromptData(textToPrompt(prompt, negativePrompt));
-    }
-  }, [prompt, negativePrompt, useStructuredPrompt]);
 
   const handleFiles = (files: File[]) => {
     // Google Analyticsでファイルのアップロードを追跡
@@ -498,21 +475,6 @@ function App() {
     // setError(null);
   };
 
-  // プロンプト表示モードの切り替え
-  const togglePromptMode = () => {
-    setUseStructuredPrompt(!useStructuredPrompt);
-
-    // モード切り替え時に現在のプロンプトを変換
-    if (!useStructuredPrompt) {
-      setPromptData(textToPrompt(prompt, negativePrompt));
-    } else {
-      const { positivePrompt, negativePrompt: negPrompt } =
-        promptToText(promptData);
-      setPrompt(positivePrompt);
-      setNegativePrompt(negPrompt);
-    }
-  };
-
   // タグデータが更新されたときにテキストプロンプトに変換
   const handlePositiveTagsChange = (tags: TagData) => {
     const promptLines: string[] = [];
@@ -532,12 +494,6 @@ function App() {
         : "";
 
     setPrompt(customPrompt);
-
-    // タグデータを保存
-    setPromptData((prev) => ({
-      ...prev,
-      positive: tags,
-    }));
   };
 
   // ネガティブプロンプト用のタグデータ更新ハンドラ
@@ -559,12 +515,6 @@ function App() {
         : "";
 
     setNegativePrompt(customPrompt);
-
-    // タグデータを保存
-    setPromptData((prev) => ({
-      ...prev,
-      negative: tags,
-    }));
   };
 
   return (
@@ -629,13 +579,6 @@ function App() {
                         <TextIcon className="inline-block mr-2 h-5 w-5" />
                         プロンプト
                       </Label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={togglePromptMode}
-                      >
-                        {useStructuredPrompt ? "テキストモード" : "タグモード"}
-                      </Button>
                     </div>
 
                     <TipTapEditor
@@ -646,7 +589,6 @@ function App() {
                         id: img.id,
                         filename: img.filename,
                       }))}
-                      showTagInterface={useStructuredPrompt}
                     />
                   </div>
 
@@ -674,7 +616,6 @@ function App() {
                             filename: img.filename,
                           }))}
                           isNegativePrompt={true}
-                          showTagInterface={useStructuredPrompt}
                         />
                       </AccordionContent>
                     </AccordionItem>
