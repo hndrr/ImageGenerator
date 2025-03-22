@@ -13,9 +13,12 @@ import { Label } from "@/components/ui/label";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { GeneratedImage } from "@/components/ui/generated-image";
 import { ApiKeyInput } from "@/components/ui/api-key-input";
-import { TipTapEditor } from "@/components/ui/tiptap-editor";
+import {
+  TipTapEditor,
+  TagData,
+  PromptData,
+} from "@/components/ui/tiptap-editor";
 import { SizeSelector } from "@/components/ui/size-selector";
-import { PromptBuilder, PromptType } from "@/components/ui/prompt-builder";
 import { promptToText, textToPrompt } from "@/lib/prompt-utils";
 import { saveEncryptedApiKey, getDecryptedApiKey } from "@/lib/crypto";
 import { logEvent } from "@/lib/analytics";
@@ -63,9 +66,9 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string>("");
   const [negativePrompt, setNegativePrompt] = useState<string>("");
-  const [promptObject, setPromptObject] = useState<PromptType>({
-    positive: [],
-    negative: [],
+  const [promptData, setPromptData] = useState<PromptData>({
+    positive: {},
+    negative: {},
   });
   const [useStructuredPrompt, setUseStructuredPrompt] =
     useState<boolean>(false);
@@ -109,16 +112,16 @@ function App() {
   useEffect(() => {
     if (useStructuredPrompt) {
       const { positivePrompt, negativePrompt: negPrompt } =
-        promptToText(promptObject);
+        promptToText(promptData);
       setPrompt(positivePrompt);
       setNegativePrompt(negPrompt);
     }
-  }, [promptObject, useStructuredPrompt]);
+  }, [promptData, useStructuredPrompt]);
 
   // テキストプロンプトが変更されたときにプロンプトオブジェクトを更新
   useEffect(() => {
     if (!useStructuredPrompt) {
-      setPromptObject(textToPrompt(prompt, negativePrompt));
+      setPromptData(textToPrompt(prompt, negativePrompt));
     }
   }, [prompt, negativePrompt, useStructuredPrompt]);
 
@@ -501,13 +504,67 @@ function App() {
 
     // モード切り替え時に現在のプロンプトを変換
     if (!useStructuredPrompt) {
-      setPromptObject(textToPrompt(prompt, negativePrompt));
+      setPromptData(textToPrompt(prompt, negativePrompt));
     } else {
       const { positivePrompt, negativePrompt: negPrompt } =
-        promptToText(promptObject);
+        promptToText(promptData);
       setPrompt(positivePrompt);
       setNegativePrompt(negPrompt);
     }
+  };
+
+  // タグデータが更新されたときにテキストプロンプトに変換
+  const handlePositiveTagsChange = (tags: TagData) => {
+    const promptLines: string[] = [];
+
+    Object.entries(tags).forEach(([category, tagList]) => {
+      if (tagList.length > 0) {
+        promptLines.push(`- ${category}: ${tagList.join(", ")}`);
+      }
+    });
+
+    // カスタムプロンプトテキストを作成
+    const customPrompt =
+      promptLines.length > 0
+        ? `Please follow the instructions below to change the image:\n\n${promptLines.join(
+            "\n"
+          )}`
+        : "";
+
+    setPrompt(customPrompt);
+
+    // タグデータを保存
+    setPromptData((prev) => ({
+      ...prev,
+      positive: tags,
+    }));
+  };
+
+  // ネガティブプロンプト用のタグデータ更新ハンドラ
+  const handleNegativeTagsChange = (tags: TagData) => {
+    const promptLines: string[] = [];
+
+    Object.entries(tags).forEach(([category, tagList]) => {
+      if (tagList.length > 0) {
+        promptLines.push(`- ${category}: ${tagList.join(", ")}`);
+      }
+    });
+
+    // カスタムプロンプトテキストを作成
+    const customPrompt =
+      promptLines.length > 0
+        ? `[NEGATIVE PROMPT] Do not include the following elements in the generated image:\n\n${promptLines.join(
+            "\n"
+          )}`
+        : "";
+
+    setNegativePrompt(customPrompt);
+
+    // タグデータを保存
+    setPromptData((prev) => ({
+      ...prev,
+      negative: tags,
+    }));
   };
 
   return (
@@ -567,64 +624,61 @@ function App() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-lg font-semibold" htmlFor="prompt">
-                      <TextIcon className="inline-block mr-2 h-5 w-5" />
-                      プロンプト
-                    </Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={togglePromptMode}
-                    >
-                      {useStructuredPrompt ? "テキストモード" : "構造化モード"}
-                    </Button>
-                  </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-lg font-semibold" htmlFor="prompt">
+                        <TextIcon className="inline-block mr-2 h-5 w-5" />
+                        プロンプト
+                      </Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={togglePromptMode}
+                      >
+                        {useStructuredPrompt ? "テキストモード" : "タグモード"}
+                      </Button>
+                    </div>
 
-                  {useStructuredPrompt ? (
-                    <PromptBuilder
-                      prompt={promptObject}
-                      onPromptChange={setPromptObject}
-                    />
-                  ) : (
                     <TipTapEditor
                       value={prompt}
                       onChange={setPrompt}
+                      onTagsChange={handlePositiveTagsChange}
                       images={images.map((img) => ({
                         id: img.id,
                         filename: img.filename,
                       }))}
+                      showTagInterface={useStructuredPrompt}
                     />
-                  )}
+                  </div>
 
-                  {!useStructuredPrompt && (
-                    <Accordion type="single" collapsible className="mt-4">
-                      <AccordionItem
-                        value="negative-prompt"
-                        className="border-b-0"
-                      >
-                        <AccordionTrigger className="py-2 px-0 hover:no-underline">
-                          <div className="flex items-center">
-                            <BanIcon className="mr-2 h-5 w-5 text-destructive" />
-                            <span className="text-lg font-semibold text-destructive">
-                              ネガティブプロンプト [EXPERIMENTAL]
-                            </span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <TipTapEditor
-                            value={negativePrompt}
-                            onChange={setNegativePrompt}
-                            placeholder="生成したくない要素を入力してください"
-                            images={images.map((img) => ({
-                              id: img.id,
-                              filename: img.filename,
-                            }))}
-                            isNegativePrompt={true}
-                          />
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  )}
+                  <Accordion type="single" collapsible className="mt-4">
+                    <AccordionItem
+                      value="negative-prompt"
+                      className="border-b-0"
+                    >
+                      <AccordionTrigger className="py-2 px-0 hover:no-underline">
+                        <div className="flex items-center">
+                          <BanIcon className="mr-2 h-5 w-5 text-destructive" />
+                          <span className="text-lg font-semibold text-destructive">
+                            ネガティブプロンプト [EXPERIMENTAL]
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <TipTapEditor
+                          value={negativePrompt}
+                          onChange={setNegativePrompt}
+                          onTagsChange={handleNegativeTagsChange}
+                          placeholder="生成したくない要素を入力してください"
+                          images={images.map((img) => ({
+                            id: img.id,
+                            filename: img.filename,
+                          }))}
+                          isNegativePrompt={true}
+                          showTagInterface={useStructuredPrompt}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
 
                   <div className="text-center">
                     <Button

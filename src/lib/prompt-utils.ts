@@ -1,30 +1,50 @@
-import { PromptCategory, PromptType } from "@/components/ui/prompt-builder";
+import { PromptType } from "@/components/ui/prompt-builder";
+import { TagData, PromptData } from "@/components/ui/tiptap-editor";
 
 /**
  * プロンプトオブジェクトをテキスト形式に変換する
  * @param prompt プロンプトオブジェクト
  * @returns テキスト形式のプロンプト
  */
-export function promptToText(prompt: PromptType): {
+export function promptToText(prompt: PromptType | PromptData): {
   positivePrompt: string;
   negativePrompt: string;
 } {
   const positiveLines: string[] = [];
   const negativeLines: string[] = [];
 
-  // ポジティブプロンプトの処理
-  prompt.positive.forEach((category) => {
-    if (category.tags.length > 0) {
-      positiveLines.push(`- ${category.name}: ${category.tags.join(", ")}`);
-    }
-  });
+  if ("positive" in prompt && Array.isArray(prompt.positive)) {
+    // PromptType形式の場合（配列）
+    const typedPrompt = prompt as PromptType;
+    typedPrompt.positive.forEach((category) => {
+      if (category.tags.length > 0) {
+        positiveLines.push(`- ${category.name}: ${category.tags.join(", ")}`);
+      }
+    });
 
-  // ネガティブプロンプトの処理
-  prompt.negative.forEach((category) => {
-    if (category.tags.length > 0) {
-      negativeLines.push(`- ${category.name}: ${category.tags.join(", ")}`);
-    }
-  });
+    typedPrompt.negative.forEach((category) => {
+      if (category.tags.length > 0) {
+        negativeLines.push(`- ${category.name}: ${category.tags.join(", ")}`);
+      }
+    });
+  } else {
+    // PromptData形式の場合（オブジェクト）
+    const typedPrompt = prompt as PromptData;
+
+    // ポジティブプロンプトの処理
+    Object.entries(typedPrompt.positive).forEach(([category, tags]) => {
+      if (tags.length > 0) {
+        positiveLines.push(`- ${category}: ${tags.join(", ")}`);
+      }
+    });
+
+    // ネガティブプロンプトの処理
+    Object.entries(typedPrompt.negative).forEach(([category, tags]) => {
+      if (tags.length > 0) {
+        negativeLines.push(`- ${category}: ${tags.join(", ")}`);
+      }
+    });
+  }
 
   const positivePrompt =
     positiveLines.length > 0
@@ -52,10 +72,10 @@ export function promptToText(prompt: PromptType): {
 export function textToPrompt(
   positiveText: string,
   negativeText: string
-): PromptType {
-  const defaultPrompt: PromptType = {
-    positive: [],
-    negative: [],
+): PromptData {
+  const defaultPrompt: PromptData = {
+    positive: {},
+    negative: {},
   };
 
   // 空のプロンプトの場合は空のオブジェクトを返す
@@ -63,8 +83,8 @@ export function textToPrompt(
     return defaultPrompt;
   }
 
-  const processText = (text: string): PromptCategory[] => {
-    if (!text) return [];
+  const processText = (text: string): TagData => {
+    if (!text) return {};
 
     // システムプロンプト部分を除去
     const contentLines = text
@@ -78,7 +98,7 @@ export function textToPrompt(
       .filter((line) => line.trim() !== "");
 
     // カテゴリーのマップを作成
-    const categories: { [key: string]: string[] } = {};
+    const categories: TagData = {};
 
     contentLines.forEach((line) => {
       // 行が "- " で始まる場合、それを取り除く
@@ -110,11 +130,7 @@ export function textToPrompt(
       }
     });
 
-    // カテゴリオブジェクトの配列に変換
-    return Object.keys(categories).map((name) => ({
-      name,
-      tags: categories[name],
-    }));
+    return categories;
   };
 
   return {
