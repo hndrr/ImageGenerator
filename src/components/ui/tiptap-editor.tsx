@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
+import { Tag } from "./tag";
 import {
   ImageIcon,
   CameraIcon as AngleIcon,
@@ -21,6 +23,8 @@ import {
   ScissorsIcon,
   PaintbrushIcon,
   LampIcon,
+  Plus,
+  X,
 } from "lucide-react";
 import {
   angleTemplates,
@@ -50,7 +54,7 @@ interface TemplateButtonProps {
   icon: React.ReactNode;
   label: string;
   templates: TemplateItem[];
-  onSelect: (text: string) => void;
+  onSelect: (template: TemplateItem) => void;
   disabled?: boolean;
 }
 
@@ -76,7 +80,7 @@ function TemplateButton({
         {templates.map((template) => (
           <button
             key={template.label}
-            onClick={() => onSelect(template.text)}
+            onClick={() => onSelect(template)}
             className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground hover:font-medium truncate"
           >
             {template.label}
@@ -120,13 +124,32 @@ function ImageReferenceButton({ images, onSelect }: ImageReferenceButtonProps) {
   );
 }
 
+// タグに関連する型定義
+export interface TagData {
+  [category: string]: string[];
+}
+
+export interface PromptData {
+  positive: TagData;
+  negative: TagData;
+}
+
 interface TipTapEditorProps {
   value: string;
   onChange: (value: string) => void;
+  onTagsChange?: (tags: TagData) => void;
   placeholder?: string;
   className?: string;
   images?: Array<{ id: string; filename: string }>;
   isNegativePrompt?: boolean;
+  showTagInterface?: boolean;
+}
+
+// カテゴリと関連タグの型定義
+interface TagCategory {
+  name: string;
+  tags: string[];
+  expanded?: boolean;
 }
 
 const systemPrompt =
@@ -138,11 +161,42 @@ const negativeSystemPrompt =
 export function TipTapEditor({
   value,
   onChange,
+  onTagsChange,
   placeholder = "画像生成の指示を入力してください",
   className,
   images = [],
   isNegativePrompt = false,
+  showTagInterface: externalShowTagInterface,
 }: TipTapEditorProps) {
+  // タグモード関連の状態
+  const [tagCategories, setTagCategories] = useState<TagCategory[]>([]);
+  const [internalShowTagInterface, setInternalShowTagInterface] =
+    useState(false);
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(
+    null
+  );
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+
+  // 外部から提供されたshowTagInterfaceがある場合はそれを使用
+  const showTagInterface =
+    externalShowTagInterface !== undefined
+      ? externalShowTagInterface
+      : internalShowTagInterface;
+
+  // タグからテキストプロンプトを生成
+  useEffect(() => {
+    if (showTagInterface && onTagsChange) {
+      const tagData: TagData = {};
+      tagCategories.forEach((category) => {
+        if (category.tags.length > 0) {
+          tagData[category.name] = [...category.tags];
+        }
+      });
+      onTagsChange(tagData);
+    }
+  }, [tagCategories, showTagInterface, onTagsChange]);
+
   // HTMLコンテンツを処理するユーティリティ関数
   const processContent = (html: string) => {
     if (!html || html === "<p></p>") {
@@ -214,16 +268,12 @@ export function TipTapEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      console.log("Original HTML:", html);
-
-      const content = processContent(html);
-      console.log("Processed content:", content);
-
-      const finalContent = createFinalPrompt(content);
-      console.log("Final content:", finalContent);
-
-      onChange(finalContent);
+      if (!showTagInterface) {
+        const html = editor.getHTML();
+        const content = processContent(html);
+        const finalContent = createFinalPrompt(content);
+        onChange(finalContent);
+      }
     },
   });
 
@@ -232,23 +282,57 @@ export function TipTapEditor({
   }
 
   const insertTemplate = (text: string) => {
-    const currentContent = editor.getHTML();
-    const isEmpty = currentContent === "" || currentContent === "<p></p>";
+    if (showTagInterface) {
+      // タグモードの場合はテンプレートからタグを追加
+      const colonIndex = text.indexOf(":");
+      if (colonIndex > 0) {
+        const category = text.substring(0, colonIndex).trim();
+        const tag = text.substring(colonIndex + 1).trim();
 
-    if (isEmpty) {
-      editor.chain().focus().setContent(`<p>- ${text}</p>`).run();
-    } else {
-      editor.chain().focus().insertContent(`<br>- ${text}`).run();
-    }
+        // カテゴリが存在するか確認
+        const categoryIndex = tagCategories.findIndex(
+          (c) => c.name.toLowerCase() === category.toLowerCase()
+        );
 
-    // テンプレート挿入後に明示的にプロンプトを更新
-    setTimeout(() => {
-      const updatedContent = editor.getHTML();
-      const content = processContent(updatedContent);
-      if (content) {
-        onChange(createFinalPrompt(content));
+        if (categoryIndex === -1) {
+          // カテゴリが存在しない場合は作成
+          setTagCategories([
+            ...tagCategories,
+            {
+              name: category,
+              tags: [tag],
+              expanded: true,
+            },
+          ]);
+        } else {
+          // カテゴリが存在する場合はタグを追加
+          const newCategories = [...tagCategories];
+          if (!newCategories[categoryIndex].tags.includes(tag)) {
+            newCategories[categoryIndex].tags.push(tag);
+            setTagCategories(newCategories);
+          }
+        }
       }
-    }, 0);
+    } else {
+      // テキストモードの場合は従来通りエディタに挿入
+      const currentContent = editor.getHTML();
+      const isEmpty = currentContent === "" || currentContent === "<p></p>";
+
+      if (isEmpty) {
+        editor.chain().focus().setContent(`<p>- ${text}</p>`).run();
+      } else {
+        editor.chain().focus().insertContent(`<br>- ${text}`).run();
+      }
+
+      // テンプレート挿入後に明示的にプロンプトを更新
+      setTimeout(() => {
+        const updatedContent = editor.getHTML();
+        const content = processContent(updatedContent);
+        if (content) {
+          onChange(createFinalPrompt(content));
+        }
+      }, 0);
+    }
   };
 
   const insertImageReference = (filename: string) => {
@@ -274,130 +358,295 @@ export function TipTapEditor({
     }, 0);
   };
 
-  return (
-    <div className="space-y-2 border border-border rounded-lg">
-      <div className="flex items-center gap-1 rounded-t-md border-b border-border bg-transparent p-1.5 flex-wrap">
-        <ImageReferenceButton images={images} onSelect={insertImageReference} />
+  // タグに関連する関数
+  const addCategory = () => {
+    if (newCategoryName.trim()) {
+      setTagCategories([
+        ...tagCategories,
+        { name: newCategoryName.trim(), tags: [], expanded: true },
+      ]);
+      setNewCategoryName("");
+    }
+  };
 
-        <TemplateButton
-          icon={<CalendarIcon className="h-4 w-4" />}
-          label="年齢"
-          templates={ageTemplates}
-          onSelect={insertTemplate}
-        />
+  const removeCategory = (index: number) => {
+    const newCategories = [...tagCategories];
+    newCategories.splice(index, 1);
+    setTagCategories(newCategories);
+  };
+
+  const addTag = (categoryIndex: number) => {
+    if (newTagName.trim()) {
+      const newCategories = [...tagCategories];
+      newCategories[categoryIndex].tags.push(newTagName.trim());
+      setTagCategories(newCategories);
+      setNewTagName("");
+    }
+  };
+
+  const removeTag = (categoryIndex: number, tagIndex: number) => {
+    const newCategories = [...tagCategories];
+    newCategories[categoryIndex].tags.splice(tagIndex, 1);
+    setTagCategories(newCategories);
+  };
+
+  const toggleCategoryExpand = (index: number) => {
+    const newCategories = [...tagCategories];
+    newCategories[index].expanded = !newCategories[index].expanded;
+    setTagCategories(newCategories);
+  };
+
+  const handleTemplateSelect = (template: TemplateItem) => {
+    insertTemplate(template.text);
+  };
+
+  // タグモードでのエディタ内容を生成
+  const renderTagModeContent = () => {
+    return (
+      <div className="space-y-2">
+        {tagCategories.map((category, catIndex) => (
+          <div key={catIndex} className="mb-2">
+            <h3 className="text-sm font-medium mb-1">{category.name}</h3>
+            <div className="flex flex-wrap gap-1">
+              {category.tags.map((tag, tagIndex) => (
+                <Tag
+                  key={tagIndex}
+                  variant="secondary"
+                  onRemove={() => removeTag(catIndex, tagIndex)}
+                >
+                  {tag}
+                </Tag>
+              ))}
+            </div>
+          </div>
+        ))}
+        {tagCategories.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            カテゴリとタグを追加してください
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className={cn("space-y-2 border border-border rounded-lg", className)}>
+      <div className="p-4">
+        {showTagInterface ? (
+          renderTagModeContent()
+        ) : (
+          <EditorContent
+            editor={editor}
+            className="prose prose-sm max-w-none"
+          />
+        )}
+      </div>
+
+      <div className="px-2 flex flex-wrap gap-2 border-t pt-2 pb-1 bg-muted/20">
+        {externalShowTagInterface === undefined && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() =>
+              setInternalShowTagInterface(!internalShowTagInterface)
+            }
+          >
+            {internalShowTagInterface ? "テキストモード" : "タグモード"}
+          </Button>
+        )}
 
         <TemplateButton
           icon={<SmileIcon className="h-4 w-4" />}
           label="表情"
           templates={expressionTemplates}
-          onSelect={insertTemplate}
+          onSelect={handleTemplateSelect}
         />
-
-        <TemplateButton
-          icon={<PoseIcon className="h-4 w-4" />}
-          label="ポーズ"
-          templates={poseTemplates}
-          onSelect={insertTemplate}
-        />
-
-        <TemplateButton
-          icon={<ScissorsIcon className="h-4 w-4" />}
-          label="髪型"
-          templates={hairstyleTemplates}
-          onSelect={insertTemplate}
-        />
-
-        <TemplateButton
-          icon={<PaintbrushIcon className="h-4 w-4" />}
-          label="髪色"
-          templates={haircolorTemplates}
-          onSelect={insertTemplate}
-        />
-
-        <TemplateButton
-          icon={<ShirtIcon className="h-4 w-4" />}
-          label="服装"
-          templates={clothingTemplates}
-          onSelect={insertTemplate}
-        />
-
-        <TemplateButton
-          icon={<GlassesIcon className="h-4 w-4" />}
-          label="小道具"
-          templates={accessoryTemplates}
-          onSelect={insertTemplate}
-        />
-
         <TemplateButton
           icon={<AngleIcon className="h-4 w-4" />}
           label="アングル"
           templates={angleTemplates}
-          onSelect={insertTemplate}
+          onSelect={handleTemplateSelect}
         />
-
         <TemplateButton
-          icon={<ApertureIcon className="h-4 w-4" />}
-          label="レンズ"
-          templates={lensTemplates}
-          onSelect={insertTemplate}
+          icon={<PoseIcon className="h-4 w-4" />}
+          label="ポーズ"
+          templates={poseTemplates}
+          onSelect={handleTemplateSelect}
         />
-
+        <TemplateButton
+          icon={<GlassesIcon className="h-4 w-4" />}
+          label="アクセサリー"
+          templates={accessoryTemplates}
+          onSelect={handleTemplateSelect}
+        />
         <TemplateButton
           icon={<MountainIcon className="h-4 w-4" />}
           label="背景"
           templates={backgroundTemplates}
-          onSelect={insertTemplate}
+          onSelect={handleTemplateSelect}
         />
-
-        <TemplateButton
-          icon={<ClockIcon className="h-4 w-4" />}
-          label="時間"
-          templates={timeTemplates}
-          onSelect={insertTemplate}
-        />
-
-        <TemplateButton
-          icon={<CloudIcon className="h-4 w-4" />}
-          label="天気"
-          templates={weatherTemplates}
-          onSelect={insertTemplate}
-        />
-
-        <TemplateButton
-          icon={<LampIcon className="h-4 w-4" />}
-          label="照明"
-          templates={lightingTemplates}
-          onSelect={insertTemplate}
-        />
-
-        <TemplateButton
-          icon={<HeartIcon className="h-4 w-4" />}
-          label="雰囲気"
-          templates={moodTemplates}
-          onSelect={insertTemplate}
-        />
-
-        <TemplateButton
-          icon={<FilterIcon className="h-4 w-4" />}
-          label="フィルター"
-          templates={filterTemplates}
-          onSelect={insertTemplate}
-        />
-
         <TemplateButton
           icon={<BrushIcon className="h-4 w-4" />}
           label="スタイル"
           templates={styleTemplates}
-          onSelect={insertTemplate}
+          onSelect={handleTemplateSelect}
         />
+        <TemplateButton
+          icon={<CloudIcon className="h-4 w-4" />}
+          label="天気"
+          templates={weatherTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<HeartIcon className="h-4 w-4" />}
+          label="ムード"
+          templates={moodTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<FilterIcon className="h-4 w-4" />}
+          label="フィルター"
+          templates={filterTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<ClockIcon className="h-4 w-4" />}
+          label="時間"
+          templates={timeTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<ApertureIcon className="h-4 w-4" />}
+          label="レンズ"
+          templates={lensTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<ShirtIcon className="h-4 w-4" />}
+          label="服装"
+          templates={clothingTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<CalendarIcon className="h-4 w-4" />}
+          label="年齢"
+          templates={ageTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<ScissorsIcon className="h-4 w-4" />}
+          label="髪型"
+          templates={hairstyleTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<PaintbrushIcon className="h-4 w-4" />}
+          label="髪色"
+          templates={haircolorTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        <TemplateButton
+          icon={<LampIcon className="h-4 w-4" />}
+          label="照明"
+          templates={lightingTemplates}
+          onSelect={handleTemplateSelect}
+        />
+        {!showTagInterface && images.length > 0 && (
+          <ImageReferenceButton
+            images={images}
+            onSelect={insertImageReference}
+          />
+        )}
       </div>
 
-      <div className={cn("rounded-b-md bg-transparent", className)}>
-        <EditorContent
-          editor={editor}
-          className="px-4 pb-3 min-h-[200px] prose prose-sm max-w-none prose-invert focus:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:px-1 [&_.ProseMirror]:h-full [&_.ProseMirror]:overflow-y-auto [&_.ProseMirror]:whitespace-pre-wrap"
-        />
-      </div>
+      {showTagInterface && (
+        <div className="px-4 py-3 border-t space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {tagCategories.map((category, catIndex) => (
+              <div
+                key={catIndex}
+                className="border rounded-md overflow-hidden w-full md:w-[calc(50%-0.5rem)]"
+              >
+                <div className="bg-muted/20 px-3 py-2 flex items-center justify-between">
+                  <h3 className="font-medium text-sm">{category.name}</h3>
+                  <div className="flex space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => toggleCategoryExpand(catIndex)}
+                    >
+                      {category.expanded ? "-" : "+"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-destructive"
+                      onClick={() => removeCategory(catIndex)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                {category.expanded && (
+                  <div className="p-2">
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {category.tags.map((tag, tagIndex) => (
+                        <Tag
+                          key={tagIndex}
+                          variant="secondary"
+                          onRemove={() => removeTag(catIndex, tagIndex)}
+                        >
+                          {tag}
+                        </Tag>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="text"
+                        value={
+                          activeCategoryIndex === catIndex ? newTagName : ""
+                        }
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        onFocus={() => setActiveCategoryIndex(catIndex)}
+                        placeholder="新しいタグ..."
+                        className="flex-1 text-sm px-2 py-1 border rounded"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-7"
+                        onClick={() => addTag(catIndex)}
+                        disabled={
+                          activeCategoryIndex !== catIndex || !newTagName.trim()
+                        }
+                      >
+                        追加
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="新しいカテゴリ..."
+              className="flex-1 px-3 py-1.5 border rounded-md"
+            />
+            <Button onClick={addCategory} disabled={!newCategoryName.trim()}>
+              <Plus className="h-4 w-4 mr-1" />
+              カテゴリ追加
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
