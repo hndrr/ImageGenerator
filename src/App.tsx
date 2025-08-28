@@ -6,8 +6,8 @@ import {
   BanIcon,
   TextIcon,
 } from "lucide-react";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import type { GenerateContentRequest } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
+import type { GenerationConfig } from "@google/genai";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -252,131 +252,70 @@ function App() {
           ),
         });
 
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const genAI = new GoogleGenAI({ apiKey });
 
-        const schema = {
-          description: "Image Generation Response",
-          type: SchemaType.OBJECT,
-          properties: {
-            candidates: {
-              type: SchemaType.ARRAY,
-              description: "List of generation candidates",
-              items: {
-                type: SchemaType.OBJECT,
-                properties: {
-                  content: {
-                    type: SchemaType.OBJECT,
-                    properties: {
-                      parts: {
-                        type: SchemaType.ARRAY,
-                        items: {
-                          type: SchemaType.OBJECT,
-                          properties: {
-                            inlineData: {
-                              type: SchemaType.OBJECT,
-                              properties: {
-                                mimeType: {
-                                  type: SchemaType.STRING,
-                                  description: "MIME type of the image",
-                                },
-                                data: {
-                                  type: SchemaType.STRING,
-                                  description: "Base64 encoded image data",
-                                },
-                              },
-                              required: ["mimeType", "data"],
-                            },
-                            text: {
-                              type: SchemaType.STRING,
-                              description:
-                                "Description text for the generated image",
-                            },
-                          },
-                        },
-                      },
-                      role: {
-                        type: SchemaType.STRING,
-                        description: "Role of the response",
-                      },
-                    },
-                    required: ["parts"],
-                  },
-                  finishReason: {
-                    type: SchemaType.STRING,
-                    description: "Reason for finishing generation",
-                  },
-                  index: {
-                    type: SchemaType.INTEGER,
-                    description: "Index of the candidate",
-                  },
-                },
-                required: ["content"],
-              },
-            },
-            usageMetadata: {
-              type: SchemaType.OBJECT,
-              description: "Metadata about token usage",
-              properties: {
-                promptTokenCount: {
-                  type: SchemaType.INTEGER,
-                  description: "Number of tokens in the prompt",
-                },
-                totalTokenCount: {
-                  type: SchemaType.INTEGER,
-                  description: "Total number of tokens used",
-                },
-                promptTokensDetails: {
-                  type: SchemaType.ARRAY,
-                  description: "Details about token usage by modality",
-                  items: {
-                    type: SchemaType.OBJECT,
-                    properties: {
-                      modality: {
-                        type: SchemaType.STRING,
-                        description: "Modality type (TEXT, IMAGE, etc.)",
-                      },
-                      tokenCount: {
-                        type: SchemaType.INTEGER,
-                        description: "Number of tokens for this modality",
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            modelVersion: {
-              type: SchemaType.STRING,
-              description: "Version of the model used",
-            },
-          },
-          required: ["candidates"],
-        };
-
-        const model = genAI.getGenerativeModel({
+        const result = await genAI.models.generateContent({
           model: "gemini-2.5-flash-image-preview",
+          contents: contents,
           generationConfig: {
             responseModalities: ["Text", "Image"],
-            responseSchema: schema,
-          } as GenerateContentRequest["generationConfig"],
+            // Remove responseSchema to fix the "Unsupported response mime type" error
+          } as GenerationConfig,
         });
-
-        const result = await model.generateContent(contents);
-        const response = await result.response;
-        console.log("Raw response:", response);
+        console.log("Raw result:", result);
 
         let imageGenerated = false;
         let imageDescription = null;
-        if (response?.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData?.data) {
-              const generatedImageData = `data:image/png;base64,${part.inlineData.data}`;
-              setGeneratedImage(generatedImageData);
-              imageGenerated = true;
-            } else if (part.text) {
-              // テキスト部分があれば説明として使用
-              imageDescription = part.text;
+
+        // Process response using new @google/genai library format
+        // The new library provides direct access to candidates through the result object
+        if (result?.candidates && result.candidates.length > 0) {
+          const candidate = result.candidates[0];
+          console.log("Processing candidate:", candidate);
+
+          if (candidate?.content?.parts && candidate.content.parts.length > 0) {
+            console.log("Found parts:", candidate.content.parts.length);
+
+            for (const part of candidate.content.parts) {
+              console.log("Processing part:", part);
+
+              // Handle image data from inlineData
+              if (part.inlineData && part.inlineData.data) {
+                const mimeType = part.inlineData.mimeType || "image/png";
+                const generatedImageData = `data:${mimeType};base64,${part.inlineData.data}`;
+                setGeneratedImage(generatedImageData);
+                imageGenerated = true;
+                console.log(
+                  "Image data extracted successfully, mimeType:",
+                  mimeType
+                );
+              }
+
+              // Handle text description
+              if (part.text && part.text.trim()) {
+                imageDescription = part.text.trim();
+                console.log("Text description extracted:", imageDescription);
+              }
             }
+          } else {
+            console.log("No content parts found in candidate");
           }
+        } else {
+          console.log("No candidates found in response");
+        }
+
+        // Validate that we received a proper response
+        if (!result || !result.candidates || result.candidates.length === 0) {
+          retryCount++;
+          if (retryCount < maxRetries) {
+            console.log(
+              `無効なレスポンス。リトライ ${retryCount}/${maxRetries}`
+            );
+            return await attemptGeneration();
+          }
+          throw new Error(
+            `APIから有効なレスポンスが返ってきませんでした。\n\n${maxRetries}回試しましたが失敗しました。\nAPIキーまたはプロンプトを確認してください。`
+          );
         }
 
         if (!imageGenerated) {
@@ -398,7 +337,7 @@ function App() {
           negativePrompt: negativePrompt,
           size: selectedSize,
           description: imageDescription,
-          rawResponse: JSON.stringify(response, null, 2),
+          rawResponse: JSON.stringify(result, null, 2),
           requestData: JSON.stringify(
             {
               prompt: finalPrompt,
@@ -412,18 +351,97 @@ function App() {
           ),
         });
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "画像の生成に失敗しました";
+        console.error("API Error:", err);
 
-        setError(errorMessage);
+        let errorMessage = "画像の生成に失敗しました";
+        let shouldRetry = false;
+
+        // Handle different types of errors from the new @google/genai library
+        if (err instanceof Error) {
+          const errorStr = err.message.toLowerCase();
+
+          // Check for specific error types that warrant retry
+          if (
+            errorStr.includes("network") ||
+            errorStr.includes("timeout") ||
+            errorStr.includes("connection") ||
+            errorStr.includes("fetch") ||
+            errorStr.includes("503") ||
+            errorStr.includes("502") ||
+            errorStr.includes("500")
+          ) {
+            shouldRetry = true;
+            errorMessage = `ネットワークエラーが発生しました: ${err.message}`;
+          } else if (
+            errorStr.includes("quota") ||
+            errorStr.includes("rate limit") ||
+            errorStr.includes("429")
+          ) {
+            shouldRetry = true;
+            errorMessage = `API制限に達しました。しばらく待ってから再試行してください: ${err.message}`;
+          } else if (
+            errorStr.includes("api key") ||
+            errorStr.includes("authentication") ||
+            errorStr.includes("401") ||
+            errorStr.includes("403")
+          ) {
+            shouldRetry = false;
+            errorMessage = `APIキーが無効です。正しいAPIキーを設定してください: ${err.message}`;
+          } else if (
+            errorStr.includes("model not found") ||
+            errorStr.includes("404")
+          ) {
+            shouldRetry = false;
+            errorMessage = `指定されたモデルが見つかりません: ${err.message}`;
+          } else if (
+            errorStr.includes("content policy") ||
+            errorStr.includes("safety") ||
+            errorStr.includes("blocked")
+          ) {
+            shouldRetry = false;
+            errorMessage = `コンテンツポリシーに違反しています。プロンプトを変更してください: ${err.message}`;
+          } else {
+            // Generic error - allow retry for unknown errors
+            shouldRetry = true;
+            errorMessage = `エラーが発生しました: ${err.message}`;
+          }
+        } else {
+          // Non-Error objects
+          shouldRetry = true;
+          errorMessage = `予期しないエラーが発生しました: ${String(err)}`;
+        }
+
+        // Retry logic for retryable errors
+        if (shouldRetry && retryCount < maxRetries) {
+          retryCount++;
+          console.log(
+            `リトライ ${retryCount}/${maxRetries} - エラー: ${errorMessage}`
+          );
+
+          // Add exponential backoff delay
+          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+
+          return await attemptGeneration();
+        }
+
+        // Final error after all retries or non-retryable error
+        const finalErrorMessage =
+          retryCount >= maxRetries
+            ? `${maxRetries}回試行しましたが失敗しました。\n最後のエラー: ${errorMessage}`
+            : errorMessage;
+
+        setError(finalErrorMessage);
         setResponseLog({
           status: "error",
           timestamp: new Date().toISOString(),
           imageGenerated: false,
-          error: errorMessage,
+          error: finalErrorMessage,
           prompt: finalPrompt,
           negativePrompt: negativePrompt,
           size: selectedSize,
+          retryCount: retryCount,
+          maxRetries: maxRetries,
           requestData: JSON.stringify(
             {
               prompt: finalPrompt,
@@ -436,8 +454,6 @@ function App() {
             2
           ),
         });
-
-        console.error("エラー:", err);
       } finally {
         setIsLoading(false);
       }
