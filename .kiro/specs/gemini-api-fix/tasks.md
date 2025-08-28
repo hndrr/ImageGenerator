@@ -24,13 +24,13 @@
   - Ensure text description extraction continues to work properly
   - _Requirements: 1.2, 2.2_
 
-- [-] 5. Update error handling for new library
+- [x] 5. Update error handling for new library
   - Modify error handling to work with the new library's error types
   - Update retry logic to be compatible with the new library's API
   - Ensure error messages are properly displayed to users
   - _Requirements: 1.3, 2.4_
 
-- [ ] 6. Test the migration
+- [x] 6. Test the migration
   - Verify that image generation works without the previous schema error
   - Test all existing functionality (prompts, negative prompts, size selection, image uploads)
   - Confirm that error handling and retry logic work properly
