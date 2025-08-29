@@ -13,8 +13,13 @@ import { Label } from "@/components/ui/label";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { GeneratedImage } from "@/components/ui/generated-image";
 import { ApiKeyInput } from "@/components/ui/api-key-input";
-import { TipTapEditor } from "@/components/ui/tiptap-editor";
+import {
+  TipTapEditor,
+  TagData,
+  PromptData,
+} from "@/components/ui/tiptap-editor";
 import { SizeSelector } from "@/components/ui/size-selector";
+import { textToPrompt } from "@/lib/prompt-utils";
 import { saveEncryptedApiKey, getDecryptedApiKey } from "@/lib/crypto";
 import { logEvent } from "@/lib/analytics";
 import {
@@ -486,8 +491,50 @@ function App() {
     // setError(null);
   };
 
+  // タグデータが更新されたときにテキストプロンプトに変換
+  const handlePositiveTagsChange = (tags: TagData) => {
+    const promptLines: string[] = [];
+
+    Object.entries(tags).forEach(([category, tagList]) => {
+      if (tagList.length > 0) {
+        promptLines.push(`- ${category}: ${tagList.join(", ")}`);
+      }
+    });
+
+    // カスタムプロンプトテキストを作成
+    const customPrompt =
+      promptLines.length > 0
+        ? `Please follow the instructions below to change the image:\n\n${promptLines.join(
+            "\n"
+          )}`
+        : "";
+
+    setPrompt(customPrompt);
+  };
+
+  // ネガティブプロンプト用のタグデータ更新ハンドラ
+  const handleNegativeTagsChange = (tags: TagData) => {
+    const promptLines: string[] = [];
+
+    Object.entries(tags).forEach(([category, tagList]) => {
+      if (tagList.length > 0) {
+        promptLines.push(`- ${category}: ${tagList.join(", ")}`);
+      }
+    });
+
+    // カスタムプロンプトテキストを作成
+    const customPrompt =
+      promptLines.length > 0
+        ? `[NEGATIVE PROMPT] Do not include the following elements in the generated image:\n\n${promptLines.join(
+            "\n"
+          )}`
+        : "";
+
+    setNegativePrompt(customPrompt);
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground p-8 max-md:p-4 w-full">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <div className="max-w-7xl mx-auto">
         <Card>
           <CardHeader>
@@ -543,13 +590,17 @@ function App() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-lg font-semibold" htmlFor="prompt">
-                      <TextIcon className="inline-block mr-2 h-5 w-5" />
-                      プロンプト
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-lg font-semibold" htmlFor="prompt">
+                        <TextIcon className="inline-block mr-2 h-5 w-5" />
+                        プロンプト
+                      </Label>
+                    </div>
+
                     <TipTapEditor
                       value={prompt}
                       onChange={setPrompt}
+                      onTagsChange={handlePositiveTagsChange}
                       images={images.map((img) => ({
                         id: img.id,
                         filename: img.filename,
@@ -574,6 +625,7 @@ function App() {
                         <TipTapEditor
                           value={negativePrompt}
                           onChange={setNegativePrompt}
+                          onTagsChange={handleNegativeTagsChange}
                           placeholder="生成したくない要素を入力してください"
                           images={images.map((img) => ({
                             id: img.id,
