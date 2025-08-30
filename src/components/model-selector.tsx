@@ -28,10 +28,10 @@ const models = [
 
 export { models };
 
-interface ModelSelectorProps {
+type ModelSelectorProps = {
   value: string;
   onChange: (value: string) => void;
-}
+};
 
 export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   return (
