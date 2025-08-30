@@ -41,7 +41,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         モデル選択
       </Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full border-border">
           <SelectValue placeholder="モデルを選択してください" />
         </SelectTrigger>
         <SelectContent>
