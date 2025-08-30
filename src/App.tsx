@@ -7,7 +7,6 @@ import {
   TextIcon,
 } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
-import type { GenerationConfig } from "@google/genai";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -15,6 +14,7 @@ import { GeneratedImage } from "@/components/ui/generated-image";
 import { ApiKeyInput } from "@/components/ui/api-key-input";
 import { TipTapEditor } from "@/components/ui/tiptap-editor";
 import { SizeSelector } from "@/components/ui/size-selector";
+import { ModelSelector, models } from "@/components/ui/model-selector";
 import { saveEncryptedApiKey, getDecryptedApiKey } from "@/lib/crypto";
 import { logEvent } from "@/lib/analytics";
 import {
@@ -67,6 +67,9 @@ function App() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>(
     "square image with 1:1 aspect ratio"
+  );
+  const [selectedModel, setSelectedModel] = useState<string>(
+    "gemini-2.5-flash-image-preview"
   );
   const [isApiKeyFromEnv, setIsApiKeyFromEnv] = useState<boolean>(false);
 
@@ -254,13 +257,21 @@ function App() {
 
         const genAI = new GoogleGenAI({ apiKey });
 
+        // Get the correct response modalities for the selected model
+        const selectedModelConfig = models.find(
+          (model) => model.value === selectedModel
+        );
+        const responseModalities = selectedModelConfig?.responseModalities || [
+          "TEXT",
+          "IMAGE",
+        ];
+
         const result = await genAI.models.generateContent({
-          model: "gemini-2.5-flash-image-preview",
+          model: selectedModel,
           contents: contents,
-          generationConfig: {
-            responseModalities: ["Text", "Image"],
-            // Remove responseSchema to fix the "Unsupported response mime type" error
-          } as GenerationConfig,
+          config: {
+            responseModalities: responseModalities,
+          },
         });
         console.log("Raw result:", result);
 
@@ -272,21 +283,26 @@ function App() {
         if (result?.candidates && result.candidates.length > 0) {
           const candidate = result.candidates[0];
           console.log("Processing candidate:", candidate);
+          console.log(
+            "Full candidate structure:",
+            JSON.stringify(candidate, null, 2)
+          );
 
           if (candidate?.content?.parts && candidate.content.parts.length > 0) {
             console.log("Found parts:", candidate.content.parts.length);
 
             for (const part of candidate.content.parts) {
               console.log("Processing part:", part);
+              console.log("Part structure:", JSON.stringify(part, null, 2));
 
-              // Handle image data from inlineData
+              // Handle image data from inlineData (Gemini 2.5 format)
               if (part.inlineData && part.inlineData.data) {
                 const mimeType = part.inlineData.mimeType || "image/png";
                 const generatedImageData = `data:${mimeType};base64,${part.inlineData.data}`;
                 setGeneratedImage(generatedImageData);
                 imageGenerated = true;
                 console.log(
-                  "Image data extracted successfully, mimeType:",
+                  "Image data extracted successfully from inlineData, mimeType:",
                   mimeType
                 );
               }
@@ -524,6 +540,11 @@ function App() {
                       onShouldSaveChange={setShouldSaveApiKey}
                     />
                   )}
+
+                  <ModelSelector
+                    value={selectedModel}
+                    onChange={setSelectedModel}
+                  />
 
                   <ImageUpload
                     images={images}
