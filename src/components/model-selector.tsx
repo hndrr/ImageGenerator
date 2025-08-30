@@ -11,7 +11,7 @@ import {
 const models = [
   {
     value: "gemini-2.5-flash-image-preview",
-    label: "Gemini 2.5 Flash Image (Nano Banana)",
+    label: "Gemini 2.5 Flash Image (Nano Banana🍌)",
     responseModalities: ["TEXT", "IMAGE"],
   },
   {
