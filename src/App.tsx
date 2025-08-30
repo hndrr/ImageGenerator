@@ -14,7 +14,7 @@ import { GeneratedImage } from "@/components/ui/generated-image";
 import { ApiKeyInput } from "@/components/ui/api-key-input";
 import { TipTapEditor } from "@/components/ui/tiptap-editor";
 import { SizeSelector } from "@/components/ui/size-selector";
-import { ModelSelector, models } from "@/components/ui/model-selector";
+import { ModelSelector, models } from "@/components/model-selector";
 import { saveEncryptedApiKey, getDecryptedApiKey } from "@/lib/crypto";
 import { logEvent } from "@/lib/analytics";
 import {
