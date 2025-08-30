@@ -12,7 +12,7 @@ const models = [
   {
     value: "gemini-2.5-flash-image-preview",
     label: "Gemini 2.5 Flash Image (Nano Banana)",
-    responseModalities: ["Text", "Image"],
+    responseModalities: ["TEXT", "IMAGE"],
   },
   {
     value: "gemini-2.0-flash-preview-image-generation",
@@ -22,7 +22,7 @@ const models = [
   {
     value: "gemini-2.0-flash-exp-image-generation",
     label: "Gemini 2.0 Flash Experimental Image Generation",
-    responseModalities: ["Image", "Text"],
+    responseModalities: ["TEXT", "IMAGE"],
   },
 ];
 
