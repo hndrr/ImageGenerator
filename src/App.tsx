@@ -307,11 +307,6 @@ function App() {
                 );
               }
 
-              // Handle image data from executableCode or other possible formats (Gemini 2.0)
-              if ("executableCode" in part) {
-                console.log("Found executableCode:", part.executableCode);
-              }
-
               // Handle text description
               if (part.text && part.text.trim()) {
                 imageDescription = part.text.trim();
@@ -321,7 +316,6 @@ function App() {
           } else {
             console.log("No content parts found in candidate");
           }
-
         } else {
           console.log("No candidates found in response");
         }
